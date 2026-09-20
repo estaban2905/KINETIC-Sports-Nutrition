@@ -7,28 +7,28 @@ export const ExperienceSection: React.FC = () => {
     {
       word: 'ENTRENA.',
       desc: 'Entrega cada repetición con máxima intensidad y disciplina.',
-      img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop',
+      img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=500&q=75',
       accent: 'text-lime-400',
       tag: 'FASE 01'
     },
     {
       word: 'SUPERA TUS LÍMITES.',
       desc: 'Rompe barreras físicas y mentales en cada sesión de levantamiento.',
-      img: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=800&auto=format&fit=crop',
+      img: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=500&q=75',
       accent: 'text-white',
       tag: 'FASE 02'
     },
     {
       word: 'RECUPERA.',
       desc: 'Reabastece tus fibras musculares con aminoácidos de biodisponibilidad superior.',
-      img: 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?q=80&w=800&auto=format&fit=crop',
+      img: 'https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=500&q=75',
       accent: 'text-lime-400',
       tag: 'FASE 03'
     },
     {
       word: 'REPITE.',
       desc: 'La consistencia forja el progreso. Vuelve más fuerte al día siguiente.',
-      img: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?q=80&w=800&auto=format&fit=crop',
+      img: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=500&q=75',
       accent: 'text-white',
       tag: 'FASE 04'
     }
@@ -74,6 +74,10 @@ export const ExperienceSection: React.FC = () => {
               <img
                 src={item.img}
                 alt={item.word}
+                loading="lazy"
+                decoding="async"
+                width={400}
+                height={420}
                 referrerPolicy="no-referrer"
                 className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700 filter brightness-75 contrast-125 -z-10"
               />

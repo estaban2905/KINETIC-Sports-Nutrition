@@ -107,6 +107,10 @@ export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
                   <img
                     src={product.image}
                     alt={product.name}
+                    loading="lazy"
+                    decoding="async"
+                    width={400}
+                    height={300}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover object-center rounded-xl group-hover:scale-105 transition-transform duration-500 filter contrast-115"
                   />

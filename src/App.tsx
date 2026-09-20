@@ -10,12 +10,14 @@ import { Testimonials } from './components/Testimonials';
 import { FAQ } from './components/FAQ';
 import { FinalCTA } from './components/FinalCTA';
 import { Footer } from './components/Footer';
-import { CartDrawer } from './components/CartDrawer';
-import { QuickViewModal } from './components/QuickViewModal';
 import { WhatsAppButton } from './components/WhatsAppButton';
-import { LandingAdminApp } from './admin/components/LandingAdminApp';
 import { FLAGSHIP_PROTEIN } from './data/products';
 import { CartItem, Product, ProductFlavor, ProductSize } from './types';
+
+// Lazy load non-critical and overlay components for faster initial page load
+const CartDrawer = React.lazy(() => import('./components/CartDrawer').then(m => ({ default: m.CartDrawer })));
+const QuickViewModal = React.lazy(() => import('./components/QuickViewModal').then(m => ({ default: m.QuickViewModal })));
+const LandingAdminApp = React.lazy(() => import('./admin/components/LandingAdminApp').then(m => ({ default: m.LandingAdminApp })));
 
 export default function App() {
   // Flagship state
@@ -166,7 +168,7 @@ export default function App() {
   const totalCartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col selection:bg-lime-400 selection:text-neutral-950">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col selection:bg-lime-400 selection:text-neutral-950 overflow-x-hidden">
       
       {/* Sticky Navbar */}
       <Navbar
@@ -231,22 +233,33 @@ export default function App() {
       {/* 10. Comprehensive Footer */}
       <Footer />
 
-      {/* Slide-out Cart Drawer with Order Simulator */}
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        items={cartItems}
-        onUpdateQuantity={handleUpdateQuantity}
-        onRemoveItem={handleRemoveItem}
-        onClearCart={handleClearCart}
-      />
+      <React.Suspense fallback={null}>
+        {/* Slide-out Cart Drawer with Order Simulator */}
+        {isCartOpen && (
+          <CartDrawer
+            isOpen={isCartOpen}
+            onClose={() => setIsCartOpen(false)}
+            items={cartItems}
+            onUpdateQuantity={handleUpdateQuantity}
+            onRemoveItem={handleRemoveItem}
+            onClearCart={handleClearCart}
+          />
+        )}
 
-      {/* Quick View Modal for Other Products */}
-      <QuickViewModal
-        product={quickViewProduct}
-        onClose={() => setQuickViewProduct(null)}
-        onAddToCart={handleAddProductDirect}
-      />
+        {/* Quick View Modal for Other Products */}
+        {quickViewProduct && (
+          <QuickViewModal
+            product={quickViewProduct}
+            onClose={() => setQuickViewProduct(null)}
+            onAddToCart={handleAddProductDirect}
+          />
+        )}
+
+        {/* Medusa Admin Overlay */}
+        {isAdminOpen && (
+          <LandingAdminApp onClose={() => setIsAdminOpen(false)} />
+        )}
+      </React.Suspense>
 
       {/* Floating WhatsApp Support Button */}
       <WhatsAppButton />
@@ -260,11 +273,6 @@ export default function App() {
         <span className="w-2 h-2 rounded-full bg-lime-400 animate-pulse" />
         Medusa Admin Dashboard
       </button>
-
-      {/* Medusa Admin Overlay */}
-      {isAdminOpen && (
-        <LandingAdminApp onClose={() => setIsAdminOpen(false)} />
-      )}
 
     </div>
   );

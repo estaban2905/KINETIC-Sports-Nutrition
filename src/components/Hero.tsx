@@ -75,27 +75,21 @@ export const Hero: React.FC<HeroProps> = ({
             </motion.div>
 
             {/* Main Headline */}
-            <motion.h1
-              initial={{ opacity: 0, y: 25 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+            <h1
               className="text-4xl sm:text-6xl xl:text-7xl font-black italic tracking-tighter uppercase font-display leading-[0.95] text-white"
             >
               CONVIERTE TU ENTRENAMIENTO EN{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 via-lime-300 to-emerald-400">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 via-lime-300 to-emerald-400 inline-block pr-3 pb-1">
                 RESULTADOS
               </span>
-            </motion.h1>
+            </h1>
 
             {/* Subtitle */}
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
+            <p
               className="mt-6 text-base sm:text-lg text-neutral-300 max-w-xl mx-auto lg:mx-0 font-normal leading-relaxed"
             >
               Proteína premium diseñada para ayudarte a recuperar, desarrollar y llevar tu rendimiento al siguiente nivel.
-            </motion.p>
+            </p>
 
             {/* Action Buttons */}
             <motion.div

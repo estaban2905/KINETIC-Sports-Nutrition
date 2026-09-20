@@ -58,6 +58,10 @@ export const Testimonials: React.FC = () => {
                 <img
                   src={review.avatar}
                   alt={review.name}
+                  loading="lazy"
+                  decoding="async"
+                  width={40}
+                  height={40}
                   referrerPolicy="no-referrer"
                   className="w-10 h-10 rounded-full object-cover border border-neutral-700"
                 />

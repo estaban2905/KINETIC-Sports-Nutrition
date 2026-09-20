@@ -57,12 +57,14 @@ export const ProteinVisual: React.FC<ProteinVisual3DProps> = ({
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // 2. Camera setup
+    // 2. Camera setup with generous vertical and horizontal headroom
     const width = container.clientWidth || 400;
-    const height = container.clientHeight || 450;
-    const camera = new THREE.PerspectiveCamera(37, width / height, 0.1, 100);
-    camera.position.set(0, 0.1, 6.1);
-    camera.lookAt(0, 0, 0);
+    const height = container.clientHeight || 480;
+    const aspect = width / height;
+    const baseFov = aspect < 0.85 ? 42 : 38;
+    const camera = new THREE.PerspectiveCamera(baseFov, aspect, 0.1, 100);
+    camera.position.set(0, 0.05, 7.0);
+    camera.lookAt(0, 0.0, 0);
 
     // 3. Renderer with antialiasing and alpha
     const renderer = new THREE.WebGLRenderer({
@@ -121,7 +123,7 @@ export const ProteinVisual: React.FC<ProteinVisual3DProps> = ({
     const floorMat = new THREE.ShadowMaterial({ opacity: 0.5 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -2.1;
+    floor.position.y = -2.20;
     floor.receiveShadow = true;
     scene.add(floor);
 
@@ -133,7 +135,7 @@ export const ProteinVisual: React.FC<ProteinVisual3DProps> = ({
       metalness: 0.5
     });
     const disc = new THREE.Mesh(discGeo, discMat);
-    disc.position.y = -2.06;
+    disc.position.y = -2.16;
     disc.receiveShadow = true;
     scene.add(disc);
 
@@ -146,7 +148,7 @@ export const ProteinVisual: React.FC<ProteinVisual3DProps> = ({
     });
     const baseGlowRing = new THREE.Mesh(baseGlowRingGeo, baseGlowRingMat);
     baseGlowRing.rotation.x = Math.PI / 2;
-    baseGlowRing.position.y = -2.22;
+    baseGlowRing.position.y = -2.30;
     scene.add(baseGlowRing);
 
     // 5. Build Initial 3D Tub Mesh
@@ -178,9 +180,9 @@ export const ProteinVisual: React.FC<ProteinVisual3DProps> = ({
       currentRotationX.current += (targetRotationX.current - currentRotationX.current) * 0.08;
 
       if (tubGroupRef.current) {
-        // Natural gentle idle hovering float on Y
-        const hoverOffset = Math.sin(elapsedTime * 1.8) * 0.08;
-        tubGroupRef.current.position.y = -0.15 + hoverOffset;
+        // Natural gentle idle hovering float on Y (constrained so cap NEVER touches top)
+        const hoverOffset = Math.sin(elapsedTime * 1.8) * 0.05;
+        tubGroupRef.current.position.y = -0.38 + hoverOffset;
 
         // Apply rotation
         tubGroupRef.current.rotation.y = currentRotationY.current;
@@ -221,7 +223,9 @@ export const ProteinVisual: React.FC<ProteinVisual3DProps> = ({
         const newWidth = Math.floor(container.clientWidth);
         const newHeight = Math.floor(container.clientHeight);
         if (newWidth === 0 || newHeight === 0) return;
-        camera.aspect = newWidth / newHeight;
+        const aspect = newWidth / newHeight;
+        camera.aspect = aspect;
+        camera.fov = aspect < 0.85 ? 42 : 38;
         camera.updateProjectionMatrix();
         rendererRef.current.setSize(newWidth, newHeight, false);
       });
@@ -235,12 +239,28 @@ export const ProteinVisual: React.FC<ProteinVisual3DProps> = ({
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       intersectionObserver.disconnect();
       resizeObserver.disconnect();
+      disposeThreeObject(scene);
       renderer.dispose();
       if (renderer.domElement.parentElement) {
         renderer.domElement.parentElement.removeChild(renderer.domElement);
       }
     };
   }, []);
+
+  // Helper to dispose Three.js geometries and materials to avoid VRAM leaks
+  function disposeThreeObject(obj: THREE.Object3D) {
+    obj.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.geometry?.dispose();
+        if (Array.isArray(mesh.material)) {
+          mesh.material.forEach((m) => m.dispose());
+        } else if (mesh.material) {
+          mesh.material.dispose();
+        }
+      }
+    });
+  }
 
   // Update Tub Texture & Lighting when flavor, servings or weight changes
   useEffect(() => {
@@ -254,6 +274,7 @@ export const ProteinVisual: React.FC<ProteinVisual3DProps> = ({
     // Rebuild mesh with new label & accent
     const oldGroup = tubGroupRef.current;
     sceneRef.current.remove(oldGroup);
+    disposeThreeObject(oldGroup);
 
     const newGroup = buildProteinTubMesh({
       flavorName,
@@ -383,13 +404,13 @@ export const ProteinVisual: React.FC<ProteinVisual3DProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className="w-72 sm:w-88 md:w-96 h-[380px] sm:h-[460px] md:h-[500px] cursor-grab active:cursor-grabbing touch-pan-y z-20 flex items-center justify-center"
+        className="w-72 sm:w-88 md:w-96 h-[420px] sm:h-[480px] md:h-[530px] cursor-grab active:cursor-grabbing touch-pan-y z-20 flex items-center justify-center relative"
         title="Arrastra para rotar el envase en 360°"
       />
 
       {/* 360° Interaction Hint & Reset Button */}
       {interactive && (
-        <div className="absolute bottom-1 z-30 flex items-center gap-2">
+        <div className="absolute bottom-2 z-30 flex items-center gap-2">
           <div className="px-3 py-1 rounded-full bg-neutral-900/90 border border-neutral-700/80 backdrop-blur-md text-[11px] font-mono text-neutral-300 shadow-xl flex items-center gap-1.5 pointer-events-none">
             <span className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-pulse" />
             <span>{isInteracting ? 'Rotando en 3D' : 'Arrastra para rotar 360°'}</span>
@@ -410,10 +431,10 @@ export const ProteinVisual: React.FC<ProteinVisual3DProps> = ({
       {showBadges && (
         <>
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
+            initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.5, duration: 0.6 }}
-            className="hidden lg:flex absolute -left-12 top-1/3 items-center gap-2.5 px-3 py-2 rounded-xl bg-neutral-900/90 border border-neutral-700/80 backdrop-blur-md shadow-xl text-xs z-30 pointer-events-none"
+            className="hidden xl:flex absolute -left-8 top-1/3 items-center gap-2.5 px-3 py-2 rounded-xl bg-neutral-900/90 border border-neutral-700/80 backdrop-blur-md shadow-xl text-xs z-30 pointer-events-none"
           >
             <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500">
               <Zap className="w-4 h-4" />
@@ -425,10 +446,10 @@ export const ProteinVisual: React.FC<ProteinVisual3DProps> = ({
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, x: 30 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.7, duration: 0.6 }}
-            className="hidden lg:flex absolute -right-10 bottom-1/4 items-center gap-2.5 px-3 py-2 rounded-xl bg-neutral-900/90 border border-neutral-700/80 backdrop-blur-md shadow-xl text-xs z-30 pointer-events-none"
+            className="hidden xl:flex absolute -right-6 bottom-1/4 items-center gap-2.5 px-3 py-2 rounded-xl bg-neutral-900/90 border border-neutral-700/80 backdrop-blur-md shadow-xl text-xs z-30 pointer-events-none"
           >
             <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-amber-400">
               <Sparkles className="w-4 h-4" />

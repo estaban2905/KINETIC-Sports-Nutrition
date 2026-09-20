@@ -48,7 +48,7 @@ export const Benefits: React.FC = () => {
               {/* Top Row: Icon & Stat */}
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <div className="w-13 h-13 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center group-hover:border-lime-400/40 transition-colors shadow-inner">
+                  <div className="w-12 h-12 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center group-hover:border-lime-400/40 transition-colors shadow-inner">
                     {iconMap[benefit.icon]}
                   </div>
                   <div className="text-right">

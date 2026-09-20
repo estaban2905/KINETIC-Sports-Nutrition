@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+const labelTextureCache = new Map<string, THREE.CanvasTexture>();
+let capBumpTextureCache: THREE.CanvasTexture | null = null;
+
 /**
  * Creates high-resolution canvas textures for the 3D protein tub label
  * faithfully matching the iconic "Gold Standard 100% Whey" packaging layout:
@@ -17,6 +20,11 @@ export function createProteinLabelTexture(
   weight: string = '5 LB (2.27 KG)',
   sizeId?: string
 ): THREE.CanvasTexture {
+  const cacheKey = `${flavorName}_${accentHex}_${servings}_${weight}_${sizeId || ''}`;
+  if (labelTextureCache.has(cacheKey)) {
+    return labelTextureCache.get(cacheKey)!;
+  }
+
   const is310g = sizeId === '310g' || weight.includes('310') || weight.includes('10.9');
   const is2lb = sizeId === '2lb' || weight.includes('2 LB') || weight.includes('907');
   
@@ -550,6 +558,7 @@ export function createProteinLabelTexture(
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.anisotropy = 16;
+  labelTextureCache.set(cacheKey, texture);
   return texture;
 }
 
@@ -583,6 +592,10 @@ function drawHazardStripes(
  * Creates normal/bump map for ribbed cap ridges and matte textured tub body.
  */
 export function createTubCapBumpTexture(): THREE.CanvasTexture {
+  if (capBumpTextureCache) {
+    return capBumpTextureCache;
+  }
+
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 512;
@@ -603,6 +616,7 @@ export function createTubCapBumpTexture(): THREE.CanvasTexture {
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(6, 1);
+  capBumpTextureCache = texture;
   return texture;
 }
 

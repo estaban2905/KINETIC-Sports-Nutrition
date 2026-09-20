@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, Zap, ShieldCheck } from 'lucide-react';
-import { ProteinVisual } from './ProteinVisual';
 import { ProductFlavor, ProductSize } from '../types';
 import { FLAGSHIP_PROTEIN } from '../data/products';
 
@@ -39,7 +38,7 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onBuyNow, selectedFlavor, se
 
               <h2 className="text-4xl sm:text-6xl xl:text-7xl font-black italic tracking-tighter uppercase font-display text-white leading-none">
                 ¿LISTO PARA SUBIR DE{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 via-lime-300 to-emerald-400">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 via-lime-300 to-emerald-400 inline-block pr-2 pb-1">
                   NIVEL?
                 </span>
               </h2>
@@ -68,15 +67,29 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onBuyNow, selectedFlavor, se
 
             {/* Right Product Visual */}
             <div className="lg:col-span-5 flex items-center justify-center">
-              <div className="w-full max-w-sm">
-                <ProteinVisual
-                  flavor={selectedFlavor}
-                  sizeWeight={currentSize.weight}
-                  sizeServings={currentSize.servings}
-                  interactive={true}
-                  showBadges={false}
-                  className="w-full"
+              <div className="relative w-full max-w-sm rounded-2xl overflow-hidden bg-gradient-to-b from-neutral-800/40 to-neutral-950/80 border border-neutral-800 p-8 flex flex-col items-center shadow-2xl group">
+                <div
+                  className="absolute inset-0 opacity-20 filter blur-2xl transition-colors duration-500 pointer-events-none"
+                  style={{ backgroundColor: selectedFlavor?.accentHex || '#dc2626' }}
                 />
+                <img
+                  src={FLAGSHIP_PROTEIN.image}
+                  alt={FLAGSHIP_PROTEIN.name}
+                  loading="lazy"
+                  decoding="async"
+                  width={340}
+                  height={340}
+                  referrerPolicy="no-referrer"
+                  className="relative z-10 w-60 h-60 sm:w-68 sm:h-68 object-contain filter drop-shadow-[0_20px_25px_rgba(0,0,0,0.8)] group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="mt-4 text-center relative z-10">
+                  <span className="inline-block px-3 py-1 rounded-full text-xs font-mono font-bold bg-neutral-900/90 border border-neutral-700 text-lime-400 uppercase tracking-wider mb-2">
+                    {currentSize.name} · {currentSize.servings} Servicios
+                  </span>
+                  <div className="text-sm font-display font-black text-white uppercase tracking-tight">
+                    {selectedFlavor?.name || 'Double Rich Chocolate'}
+                  </div>
+                </div>
               </div>
             </div>
 

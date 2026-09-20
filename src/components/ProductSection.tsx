@@ -166,7 +166,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
                   </span>
                 </div>
                 <div className="text-xs text-neutral-400 mt-0.5">
-                  Hasta 3 cuotas sin interés de ${(currentSize.price / 3).toFixed(0).toLocaleString()}
+                  Hasta 3 cuotas sin interés de ${Math.round(currentSize.price / 3).toLocaleString('es-CL')}
                 </div>
               </div>
               <div className="text-right">
@@ -178,8 +178,8 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
 
             {/* Size Selector - Segmented design exactly matching user's reference image */}
             <div className="mt-6">
-              <label className="block text-xs font-bold font-mono tracking-widest text-neutral-300 uppercase mb-2.5">
-                TAMAÑO:
+              <label className="block text-xs font-mono tracking-wider text-neutral-300 uppercase mb-2.5">
+                1. Selecciona Tamaño: <span className="text-lime-400 font-bold">{currentSize.name} ({currentSize.weight})</span>
               </label>
               
               <div className="rounded-2xl border border-neutral-700/80 bg-neutral-900/90 overflow-hidden shadow-lg grid grid-cols-3 divide-x divide-neutral-800">
