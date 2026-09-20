@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: 'Barlow Condensed', -apple-system, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #0a0a0a;
+    color: #f5f5f5;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Custom glow & visual effects */
+.glow-lime {
+  box-shadow: 0 0 50px -10px rgba(163, 230, 53, 0.35);
+}
+
+.glow-lime-sm {
+  box-shadow: 0 0 25px -5px rgba(163, 230, 53, 0.4);
+}
+
+.glow-text {
+  text-shadow: 0 0 30px rgba(163, 230, 53, 0.4);
+}
+
+/* Scanline / Carbon texture subtle overlay */
+.bg-grid-pattern {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.bg-radial-gradient {
+  background: radial-gradient(circle at 50% 30%, rgba(163, 230, 53, 0.12) 0%, rgba(10, 10, 10, 0.95) 70%, #0a0a0a 100%);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0d0d0d;
+}
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a3e635;
+}
+

@@ -1,0 +1,6 @@
+{
+  "name": "KINETIC Sports Nutrition",
+  "description": "Backend ecommerce completo en Medusa 2.x con Landing Content Module, catálogo de suplementos, inventario y API REST para KINETIC Sports Nutrition.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
