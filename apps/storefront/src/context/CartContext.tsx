@@ -17,7 +17,7 @@ const CART_ID_KEY = "kinetic_cart_id";
  * useless to a shopper, so it's replaced with an actionable one instead of
  * being shown as-is.
  */
-function describeCartError(err: unknown): string {
+export function describeCartError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err);
   if (/failed to fetch|networkerror|load failed|ECONNREFUSED/i.test(message)) {
     return "No pudimos conectar con el servidor de la tienda. Verifica que el backend (apps/backend) esté corriendo en " +

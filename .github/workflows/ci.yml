@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # medusa lint no-ops (and exits non-zero) because eslint isn't installed
+      # in this project yet — tsc is the real type-safety gate for now.
+      - name: Typecheck
+        working-directory: apps/backend
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: Unit tests
+        working-directory: apps/backend
+        run: TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules npx jest --silent --runInBand --forceExit
+
+  storefront:
+    name: Storefront
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run lint -w apps/storefront
+      - name: Unit tests
+        run: npm run test -w apps/storefront
+      - name: Build
+        run: npm run build -w apps/storefront

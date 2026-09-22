@@ -14,6 +14,18 @@ import { Sentry } from "../lib/sentry"
 const STALE_AFTER_MINUTES = 15
 const LOOKBACK_HOURS = 48
 
+export function isWebpayAuthorized(
+  result: { status?: string; response_code?: number } | null | undefined
+): boolean {
+  return result?.status === "AUTHORIZED" && result?.response_code === 0
+}
+
+export function isMercadoPagoApproved(
+  payment: { status?: string } | null | undefined
+): boolean {
+  return payment?.status === "approved"
+}
+
 /**
  * Catches carts whose payment actually succeeded at the provider but never
  * turned into an order — because the customer's browser never came back to
@@ -104,7 +116,7 @@ export default async function reconcilePayments(container: MedusaContainer) {
       const token = data?.token as string | undefined
       if (!token) return
       const result = await getWebpayTransaction().status(token)
-      trulyPaid = result?.status === "AUTHORIZED" && result?.response_code === 0
+      trulyPaid = isWebpayAuthorized(result)
     } else if (session.provider_id === "pp_mercadopago_mercadopago") {
       if (!mercadopagoClient) return
       const sessionId = data?.session_id as string | undefined
@@ -112,7 +124,7 @@ export default async function reconcilePayments(container: MedusaContainer) {
       const { results } = await new MercadoPagoPayment(mercadopagoClient).search({
         options: { external_reference: sessionId, sort: "date_created", criteria: "desc" },
       })
-      trulyPaid = results?.[0]?.status === "approved"
+      trulyPaid = isMercadoPagoApproved(results?.[0])
     } else {
       return
     }

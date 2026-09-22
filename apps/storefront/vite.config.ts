@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -15,6 +16,9 @@ export default defineConfig(() => {
       // where they'd otherwise resolve the backend's React 18 instead of
       // this app's React 19, causing "invalid hook call" / duplicate React errors.
       dedupe: ['react', 'react-dom'],
+    },
+    test: {
+      environment: 'jsdom',
     },
     build: {
       rollupOptions: {

@@ -14,6 +14,27 @@ import {
 } from "@medusajs/medusa/core-flows"
 
 /**
+ * pp_system_default (Medusa's manual/no-op provider) always authorizes — it
+ * exists only so checkout can be exercised without real payment credentials
+ * in development. Publishing it in a production region lets a customer
+ * complete an order without paying, so it's never seeded outside
+ * development. See CartDrawer's ALLOWED_PAYMENT_PROVIDER_IDS for the
+ * matching client-side guard.
+ */
+export function getDesiredPaymentProviders(
+  nodeEnv: string | undefined,
+  registeredIds: Set<string>
+): string[] {
+  const desired = [
+    ...(nodeEnv !== "production" ? ["pp_system_default"] : []),
+    "pp_webpay_webpay",
+    "pp_mercadopago_mercadopago",
+    "pp_stripe_stripe",
+  ]
+  return desired.filter((id) => registeredIds.has(id))
+}
+
+/**
  * Seeds a Chile region (CLP) on top of the stock Medusa demo seed, which only
  * ships a Europe/EUR region. Run once with:
  *   npx medusa exec ./src/scripts/seed-chile.ts
@@ -87,19 +108,7 @@ export default async function seedChile({
     fields: ["id"],
   })
   const registeredIds = new Set(registeredPaymentProviders.map((p) => p.id))
-  const desiredPaymentProviders = [
-    // pp_system_default (Medusa's manual/no-op provider) always authorizes —
-    // it exists only so checkout can be exercised without real payment
-    // credentials in development. Publishing it in a production region lets
-    // a customer complete an order without paying, so it's never seeded
-    // outside development. See CartDrawer's ALLOWED_PAYMENT_PROVIDERS for
-    // the matching client-side guard.
-    ...(process.env.NODE_ENV !== "production" ? ["pp_system_default"] : []),
-    "pp_webpay_webpay",
-    "pp_mercadopago_mercadopago",
-    "pp_stripe_stripe",
-  ]
-  const paymentProviders = desiredPaymentProviders.filter((id) => registeredIds.has(id))
+  const paymentProviders = getDesiredPaymentProviders(process.env.NODE_ENV, registeredIds)
 
   logger.info(`Seeding Chile region with payment providers: ${paymentProviders.join(", ")}`)
   const { result: regionResult } = await createRegionsWorkflow(container).run({
