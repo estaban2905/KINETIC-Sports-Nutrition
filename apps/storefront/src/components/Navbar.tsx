@@ -1,15 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingBag, Menu, X, Zap, ChevronRight } from 'lucide-react';
+import { LandingSettings, LandingNavLink, getLandingNavLinks } from '../lib/landing';
 
 interface NavbarProps {
   cartCount: number;
   onOpenCart: () => void;
+  settings: LandingSettings | null;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart }) => {
+const FALLBACK_BRAND_NAME = 'KINETIC';
+const FALLBACK_BRAND_TAGLINE = 'SPORTS NUTRITION';
+const FALLBACK_NAV_LINKS: LandingNavLink[] = [
+  { id: 'fallback-1', label: 'Productos', url: '#productos', group: 'navbar' },
+  { id: 'fallback-2', label: 'Beneficios', url: '#beneficios', group: 'navbar' },
+  { id: 'fallback-3', label: 'Nosotros', url: '#experiencia', group: 'navbar' },
+  { id: 'fallback-4', label: 'FAQ', url: '#faq', group: 'navbar' },
+];
+
+export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [navLinksData, setNavLinksData] = useState<LandingNavLink[] | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,12 +31,19 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const navLinks = [
-    { label: 'Productos', href: '#productos' },
-    { label: 'Beneficios', href: '#beneficios' },
-    { label: 'Nosotros', href: '#experiencia' },
-    { label: 'FAQ', href: '#faq' },
-  ];
+  useEffect(() => {
+    getLandingNavLinks('navbar').then(setNavLinksData);
+  }, []);
+
+  const [brandName, ...brandTaglineParts] = (settings?.brand_name ?? FALLBACK_BRAND_NAME).split(' ');
+  const brandTagline = brandTaglineParts.length
+    ? brandTaglineParts.join(' ').toUpperCase()
+    : FALLBACK_BRAND_TAGLINE;
+
+  const navLinks = (navLinksData && navLinksData.length > 0 ? navLinksData : FALLBACK_NAV_LINKS).map((link) => ({
+    label: link.label,
+    href: link.url,
+  }));
 
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
@@ -58,11 +77,11 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart }) => {
             </div>
             <div className="flex flex-col">
               <span className="text-xl sm:text-2xl font-black italic tracking-tighter uppercase font-display leading-none text-white flex items-center gap-1">
-                KINETIC
+                {brandName}
                 <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block" />
               </span>
               <span className="text-[9px] font-mono tracking-[0.25em] text-neutral-400 uppercase -mt-0.5">
-                SPORTS NUTRITION
+                {brandTagline}
               </span>
             </div>
           </a>

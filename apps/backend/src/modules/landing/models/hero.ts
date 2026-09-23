@@ -3,6 +3,7 @@ import { model } from "@medusajs/framework/utils"
 const Hero = model.define("landing_hero", {
   id: model.id().primaryKey(),
   title: model.text(),
+  headline_highlight: model.text().nullable(),
   subtitle: model.text(),
   badge: model.text().default("NUEVA FÓRMULA CFM"),
   primary_cta_text: model.text().default("Comprar Ahora"),

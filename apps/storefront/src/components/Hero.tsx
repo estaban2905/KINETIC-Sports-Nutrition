@@ -2,14 +2,21 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { ArrowRight, ShieldCheck, Zap, Sparkles, CheckCircle2 } from 'lucide-react';
 import { ProteinVisual } from './ProteinVisual';
-import { FLAGSHIP_PROTEIN } from '../data/products';
 import { ProductFlavor, ProductSize } from '../types';
-import { getLandingHero, LandingHero } from '../lib/landing';
+import { getLandingHero, getLandingTrustBadges, LandingHero, LandingTrustBadge } from '../lib/landing';
 
 const FALLBACK_BADGE = '100% CFM WHEY ISOLATE // EDICIÓN LIMITADA';
+const FALLBACK_TITLE = 'CONVIERTE TU ENTRENAMIENTO EN';
+const FALLBACK_TITLE_HIGHLIGHT = 'RESULTADOS';
 const FALLBACK_SUBTITLE = 'Proteína premium diseñada para ayudarte a recuperar, desarrollar y llevar tu rendimiento al siguiente nivel.';
 const FALLBACK_PRIMARY_CTA = 'COMPRAR AHORA';
 const FALLBACK_SECONDARY_CTA = 'VER PRODUCTO';
+const FALLBACK_TRUST_BADGES: LandingTrustBadge[] = [
+  { id: 'fallback-1', icon: null, text: '24g Proteína Pura' },
+  { id: 'fallback-2', icon: null, text: '0g Azúcar Añadida' },
+  { id: 'fallback-3', icon: null, text: '5.5g BCAAs Reales' },
+  { id: 'fallback-4', icon: null, text: 'Sin Grumos / CFM' },
+];
 
 interface HeroProps {
   onBuyNow: () => void;
@@ -26,9 +33,11 @@ export const Hero: React.FC<HeroProps> = ({
 }) => {
   const heroRef = useRef<HTMLDivElement>(null);
   const [heroContent, setHeroContent] = useState<LandingHero | null>(null);
+  const [trustBadges, setTrustBadges] = useState<LandingTrustBadge[] | null>(null);
 
   useEffect(() => {
     getLandingHero().then(setHeroContent);
+    getLandingTrustBadges().then(setTrustBadges);
   }, []);
 
   const { scrollYProgress } = useScroll({
@@ -89,9 +98,9 @@ export const Hero: React.FC<HeroProps> = ({
             <h1
               className="text-4xl sm:text-6xl xl:text-7xl font-black italic tracking-tighter uppercase font-display leading-[0.95] text-white"
             >
-              CONVIERTE TU ENTRENAMIENTO EN{' '}
+              {heroContent?.title || FALLBACK_TITLE}{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 via-lime-300 to-emerald-400 inline-block pr-3 pb-1">
-                RESULTADOS
+                {heroContent?.headline_highlight || FALLBACK_TITLE_HIGHLIGHT}
               </span>
             </h1>
 
@@ -134,22 +143,12 @@ export const Hero: React.FC<HeroProps> = ({
               transition={{ duration: 0.7, delay: 0.45 }}
               className="mt-10 pt-6 border-t border-neutral-800/80 grid grid-cols-2 sm:grid-cols-4 gap-4"
             >
-              <div className="flex items-center space-x-2.5">
-                <CheckCircle2 className="w-4 h-4 text-lime-400 flex-shrink-0" />
-                <span className="text-xs font-semibold text-neutral-300 tracking-wide">24g Proteína Pura</span>
-              </div>
-              <div className="flex items-center space-x-2.5">
-                <CheckCircle2 className="w-4 h-4 text-lime-400 flex-shrink-0" />
-                <span className="text-xs font-semibold text-neutral-300 tracking-wide">0g Azúcar Añadida</span>
-              </div>
-              <div className="flex items-center space-x-2.5">
-                <CheckCircle2 className="w-4 h-4 text-lime-400 flex-shrink-0" />
-                <span className="text-xs font-semibold text-neutral-300 tracking-wide">5.5g BCAAs Reales</span>
-              </div>
-              <div className="flex items-center space-x-2.5">
-                <CheckCircle2 className="w-4 h-4 text-lime-400 flex-shrink-0" />
-                <span className="text-xs font-semibold text-neutral-300 tracking-wide">Sin Grumos / CFM</span>
-              </div>
+              {(trustBadges && trustBadges.length > 0 ? trustBadges : FALLBACK_TRUST_BADGES).map((badge) => (
+                <div key={badge.id} className="flex items-center space-x-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-lime-400 flex-shrink-0" />
+                  <span className="text-xs font-semibold text-neutral-300 tracking-wide">{badge.text}</span>
+                </div>
+              ))}
             </motion.div>
 
           </motion.div>

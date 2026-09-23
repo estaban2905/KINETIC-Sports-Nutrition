@@ -12,27 +12,154 @@ export default async function seedLanding({
   const landingModuleService: LandingModuleService = container.resolve(LANDING_MODULE)
 
   const [existingHero] = await landingModuleService.listHeroes({}, { take: 1 })
-  if (existingHero) {
-    logger.info("Landing content already seeded, skipping.")
-    return
+  if (!existingHero) {
+    logger.info("Seeding landing content...")
+
+    await landingModuleService.createHeroes({
+      title: "CONVIERTE TU ENTRENAMIENTO EN",
+      headline_highlight: "RESULTADOS",
+      subtitle:
+        "PROTEIN X: La máxima pureza en aislado de suero de leche microfiltrado CFM con 24g de proteína, 5.5g de BCAAs y 0g de azúcar añadido por porción.",
+      badge: "NUEVA FÓRMULA CFM 2025",
+      primary_cta_text: "COMPRAR AHORA",
+      primary_cta_url: "#producto",
+      secondary_cta_text: "VER BENEFICIOS",
+      secondary_cta_url: "#beneficios",
+      image_url: "/assets/images/protein-tub.webp",
+      mobile_image_url: "/assets/images/protein-tub-mobile.webp",
+      active: true,
+      sort_order: 1,
+    } as any)
+  } else if (!existingHero.headline_highlight) {
+    // Backfills the headline that Hero.tsx used to hardcode, now that it
+    // reads title/headline_highlight from this row — keeps the storefront
+    // headline unchanged for installs seeded before these columns existed.
+    await landingModuleService.updateHeroes({
+      id: existingHero.id,
+      title: "CONVIERTE TU ENTRENAMIENTO EN",
+      headline_highlight: "RESULTADOS",
+    } as any)
+    logger.info("Backfilled landing_hero headline fields.")
   }
 
-  logger.info("Seeding landing content...")
+  const [existingTrustBadge] = await landingModuleService.listTrustBadges({}, { take: 1 })
+  if (!existingTrustBadge) {
+    await landingModuleService.createTrustBadges([
+      { text: "24g Proteína Pura", active: true, sort_order: 1 },
+      { text: "0g Azúcar Añadida", active: true, sort_order: 2 },
+      { text: "5.5g BCAAs Reales", active: true, sort_order: 3 },
+      { text: "Sin Grumos / CFM", active: true, sort_order: 4 },
+    ] as any)
+  }
 
-  await landingModuleService.createHeroes({
-    title: "POTENCIA PURA. RECUPERACIÓN TOTAL.",
-    subtitle:
-      "PROTEIN X: La máxima pureza en aislado de suero de leche microfiltrado CFM con 24g de proteína, 5.5g de BCAAs y 0g de azúcar añadido por porción.",
-    badge: "NUEVA FÓRMULA CFM 2025",
-    primary_cta_text: "COMPRAR AHORA",
-    primary_cta_url: "#producto",
-    secondary_cta_text: "VER BENEFICIOS",
-    secondary_cta_url: "#beneficios",
-    image_url: "/assets/images/protein-tub.webp",
-    mobile_image_url: "/assets/images/protein-tub-mobile.webp",
-    active: true,
-    sort_order: 1,
-  } as any)
+  const [existingFinalCta] = await landingModuleService.listFinalCtas({}, { take: 1 })
+  if (!existingFinalCta) {
+    await landingModuleService.createFinalCtas({
+      badge_text: "MÁXIMA CALIDAD COMPROBADA",
+      headline: "¿LISTO PARA SUBIR DE",
+      headline_highlight: "NIVEL?",
+      subtext:
+        "Equipa tu entrenamiento con productos diseñados para acompañar tus objetivos. Sin rellenos, sin compromisos.",
+      guarantee_text: "Garantía de Satisfacción 30 Días",
+      cta_text: "COMPRAR AHORA",
+    } as any)
+  }
+
+  const [existingProductSection] = await landingModuleService.listProductSections({}, { take: 1 })
+  if (!existingProductSection) {
+    await landingModuleService.createProductSections({
+      eyebrow: "PRODUCTO PRINCIPAL",
+      headline: "PROTEÍNA PREMIUM",
+      tagline: "Construida para quienes entrenan con un objetivo.",
+      micro_label: "KINETIC PERFORMANCE // CFM SERIES",
+      formula_heading: "Aislamiento por Flujo Cruzado (CFM)",
+      advantages_heading: "Ventajas Clave",
+    } as any)
+  }
+
+  const [existingGuarantee] = await landingModuleService.listGuarantees({}, { take: 1 })
+  if (!existingGuarantee) {
+    await landingModuleService.createGuarantees([
+      { icon: "Truck", title: "Envío Rápido", subtitle: "24-48 hrs hábiles", context: "product_section", active: true, sort_order: 1 },
+      { icon: "ShieldCheck", title: "Pago Seguro", subtitle: "Encriptación SSL", context: "product_section", active: true, sort_order: 2 },
+      { icon: "RefreshCw", title: "Satisfacción", subtitle: "100% Garantizada", context: "product_section", active: true, sort_order: 3 },
+    ] as any)
+  }
+
+  const [existingUsageTip] = await landingModuleService.listUsageTips({}, { take: 1 })
+  if (!existingUsageTip) {
+    await landingModuleService.createUsageTips([
+      {
+        title: "Post-Entrenamiento",
+        body: "Tomar dentro de los 30-45 minutos posteriores a finalizar el entrenamiento para optimizar la síntesis proteica muscular.",
+        active: true,
+        sort_order: 1,
+      },
+      {
+        title: "En el Desayuno",
+        body: "Ideal para romper el ayuno nocturno con una fuente de aminoácidos limpia de absorción inmediata.",
+        active: true,
+        sort_order: 2,
+      },
+      {
+        title: "Preparación",
+        body: "Disolver 1 scoop (30g) en 250ml de agua fría o leche vegetal en tu shaker durante 10 segundos.",
+        active: true,
+        sort_order: 3,
+      },
+    ] as any)
+  }
+
+  const [existingNavLink] = await landingModuleService.listNavLinks({}, { take: 1 })
+  if (!existingNavLink) {
+    await landingModuleService.createNavLinks([
+      { label: "Productos", url: "#productos", group: "navbar", active: true, sort_order: 1 },
+      { label: "Beneficios", url: "#beneficios", group: "navbar", active: true, sort_order: 2 },
+      { label: "Nosotros", url: "#experiencia", group: "navbar", active: true, sort_order: 3 },
+      { label: "FAQ", url: "#faq", group: "navbar", active: true, sort_order: 4 },
+
+      { label: "KINETIC Iso-Whey Pro", url: "#producto", group: "footer_productos", active: true, sort_order: 1 },
+      { label: "Creatina Creapure®", url: "#productos", group: "footer_productos", active: true, sort_order: 2 },
+      { label: "Pre-Workout Nitro", url: "#productos", group: "footer_productos", active: true, sort_order: 3 },
+      { label: "Shaker Pro Steel", url: "#productos", group: "footer_productos", active: true, sort_order: 4 },
+      { label: "Barras Proteicas", url: "#productos", group: "footer_productos", active: true, sort_order: 5 },
+
+      { label: "Preguntas Frecuentes", url: "#faq", group: "footer_soporte", active: true, sort_order: 1 },
+      { label: "Modo de Preparación", url: "#beneficios", group: "footer_soporte", active: true, sort_order: 2 },
+      { label: "Políticas de Envíos", url: "#faq", group: "footer_soporte", active: true, sort_order: 3 },
+      { label: "Medios de Pago", url: "#faq", group: "footer_soporte", active: true, sort_order: 4 },
+
+      { label: "Garantía de Satisfacción", url: "#", group: "footer_legal", active: true, sort_order: 1 },
+      { label: "Políticas de Devolución", url: "#", group: "footer_legal", active: true, sort_order: 2 },
+    ] as any)
+  }
+
+  const [existingBenefit] = await landingModuleService.listBenefits({}, { take: 1 })
+  if (existingBenefit) {
+    const [existingBannerRow] = await landingModuleService.listBanners({}, { take: 1 })
+    if (existingBannerRow && !existingBannerRow.tag) {
+      await landingModuleService.updateBanners({
+        id: existingBannerRow.id,
+        tag: "VENTA RELÁMPAGO // 20% OFF INMEDIATO",
+      } as any)
+    }
+
+    const [existingSettingsRow] = await landingModuleService.listSettings({}, { take: 1 })
+    if (existingSettingsRow && !existingSettingsRow.whatsapp_message_template) {
+      await landingModuleService.updateSettings({
+        id: existingSettingsRow.id,
+        footer_description:
+          "Nutrición deportiva diseñada con precisión científica para atletas y personas comprometidas con su máximo rendimiento físico.",
+        whatsapp_message_template:
+          "¡Hola! Me gustaría hacer una consulta sobre la Proteína Premium KINETIC y los envíos.",
+        whatsapp_tooltip_text: "¿Dudas con tu suplementación? Chatea con un asesor",
+        offer_fallback_headline: "TU PRÓXIMO ENTRENAMIENTO EMPIEZA AQUÍ",
+      } as any)
+    }
+
+    logger.info("Landing benefits/testimonials/faq already seeded, skipping those.")
+    return
+  }
 
   await landingModuleService.createBenefits([
     {
@@ -179,6 +306,7 @@ export default async function seedLanding({
   await landingModuleService.createBanners({
     title: "LANZAMIENTO OFICIAL: 15% OFF",
     subtitle: "Usa el código KINETIC10 en el checkout para obtener 10% adicional más shaker de regalo.",
+    tag: "VENTA RELÁMPAGO // 20% OFF INMEDIATO",
     image_url: "/assets/images/banner-promo.webp",
     button_text: "OBTENER OFERTA",
     button_url: "#oferta",
@@ -202,12 +330,18 @@ export default async function seedLanding({
     shipping_information: "Envíos gratis en compras sobre $45.000 a todo Chile continental.",
     footer_text:
       "© 2025 KINETIC Sports Nutrition. Todos los derechos reservados. Suplementos alimentarios de grado farmacéutico.",
+    footer_description:
+      "Nutrición deportiva diseñada con precisión científica para atletas y personas comprometidas con su máximo rendimiento físico.",
     privacy_policy: "https://kineticnutrition.cl/politicas-de-privacidad",
     terms_and_conditions: "https://kineticnutrition.cl/terminos-y-condiciones",
     seo_title: "KINETIC Sports Nutrition | Proteína Aislada CFM Premium",
     seo_description:
       "Desarrolla masa muscular magra y maximiza tu recuperación con PROTEIN X. 24g de proteína pura por servicio, 5.5g BCAAs, 0g de azúcar añadido. Despacho a todo Chile.",
     og_image: "https://images.unsplash.com/photo-1579722821273-0f6c7d44362f?w=1200&auto=format&fit=crop&q=80",
+    whatsapp_message_template:
+      "¡Hola! Me gustaría hacer una consulta sobre la Proteína Premium KINETIC y los envíos.",
+    whatsapp_tooltip_text: "¿Dudas con tu suplementación? Chatea con un asesor",
+    offer_fallback_headline: "TU PRÓXIMO ENTRENAMIENTO EMPIEZA AQUÍ",
   } as any)
 
   logger.info("Landing content seeded successfully.")

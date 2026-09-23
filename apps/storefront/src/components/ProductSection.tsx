@@ -1,12 +1,59 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { ShoppingBag, Star, ShieldCheck, Truck, RefreshCw, Check, Zap, Flame, Info } from 'lucide-react';
-import { FLAGSHIP_PROTEIN } from '../data/products';
-import { ProductFlavor, ProductSize } from '../types';
+import { Product, ProductFlavor, ProductSize } from '../types';
 import { ProteinVisual } from './ProteinVisual';
 import confetti from 'canvas-confetti';
+import {
+  getLandingProductSection,
+  getLandingGuarantees,
+  getLandingUsageTips,
+  LandingProductSection,
+  LandingGuarantee,
+  LandingUsageTip,
+} from '../lib/landing';
+
+const FALLBACK_SECTION: LandingProductSection = {
+  eyebrow: 'PRODUCTO PRINCIPAL',
+  headline: 'PROTEÍNA PREMIUM',
+  tagline: 'Construida para quienes entrenan con un objetivo.',
+  micro_label: 'KINETIC PERFORMANCE // CFM SERIES',
+  formula_heading: 'Aislamiento por Flujo Cruzado (CFM)',
+  advantages_heading: 'Ventajas Clave',
+};
+
+const FALLBACK_GUARANTEES: LandingGuarantee[] = [
+  { id: 'fallback-1', icon: 'Truck', title: 'Envío Rápido', subtitle: '24-48 hrs hábiles', context: 'product_section' },
+  { id: 'fallback-2', icon: 'ShieldCheck', title: 'Pago Seguro', subtitle: 'Encriptación SSL', context: 'product_section' },
+  { id: 'fallback-3', icon: 'RefreshCw', title: 'Satisfacción', subtitle: '100% Garantizada', context: 'product_section' },
+];
+
+const GUARANTEE_ICONS: Record<string, React.ElementType> = {
+  Truck,
+  ShieldCheck,
+  RefreshCw,
+};
+
+const FALLBACK_USAGE_TIPS: LandingUsageTip[] = [
+  {
+    id: 'fallback-1',
+    title: 'Post-Entrenamiento',
+    body: 'Tomar dentro de los 30-45 minutos posteriores a finalizar el entrenamiento para optimizar la síntesis proteica muscular.',
+  },
+  {
+    id: 'fallback-2',
+    title: 'En el Desayuno',
+    body: 'Ideal para romper el ayuno nocturno con una fuente de aminoácidos limpia de absorción inmediata.',
+  },
+  {
+    id: 'fallback-3',
+    title: 'Preparación',
+    body: 'Disolver 1 scoop (30g) en 250ml de agua fría o leche vegetal en tu shaker durante 10 segundos.',
+  },
+];
 
 interface ProductSectionProps {
+  product: Product;
   onAddToCart: (flavor: ProductFlavor, size: ProductSize, quantity: number) => void;
   selectedFlavor: ProductFlavor;
   onSelectFlavor: (flavor: ProductFlavor) => void;
@@ -15,6 +62,7 @@ interface ProductSectionProps {
 }
 
 export const ProductSection: React.FC<ProductSectionProps> = ({
+  product,
   onAddToCart,
   selectedFlavor,
   onSelectFlavor,
@@ -22,7 +70,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
   onSelectSize
 }) => {
   const [internalSize, setInternalSize] = useState<ProductSize>(
-    controlledSize || FLAGSHIP_PROTEIN.sizes![1] // Default to 2 Libras ($65.990) as shown in user screenshot
+    controlledSize || product.sizes![1] // Default to 2 Libras ($65.990) as shown in user screenshot
   );
 
   const currentSize = controlledSize || internalSize;
@@ -35,6 +83,19 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
   const [quantity, setQuantity] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'info' | 'nutrition' | 'usage'>('info');
   const [addedSuccess, setAddedSuccess] = useState<boolean>(false);
+  const [section, setSection] = useState<LandingProductSection | null>(null);
+  const [guarantees, setGuarantees] = useState<LandingGuarantee[] | null>(null);
+  const [usageTips, setUsageTips] = useState<LandingUsageTip[] | null>(null);
+
+  useEffect(() => {
+    getLandingProductSection().then(setSection);
+    getLandingGuarantees().then(setGuarantees);
+    getLandingUsageTips().then(setUsageTips);
+  }, []);
+
+  const content = section ?? FALLBACK_SECTION;
+  const guaranteeItems = guarantees && guarantees.length > 0 ? guarantees : FALLBACK_GUARANTEES;
+  const usageTipItems = usageTips && usageTips.length > 0 ? usageTips : FALLBACK_USAGE_TIPS;
 
   const handleAdd = () => {
     onAddToCart(selectedFlavor, currentSize, quantity);
@@ -74,13 +135,13 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-900 border border-neutral-800 text-lime-400 text-xs font-mono uppercase tracking-widest mb-3">
             <Flame className="w-3.5 h-3.5" />
-            PRODUCTO PRINCIPAL
+            {content.eyebrow}
           </div>
           <h2 className="text-3xl sm:text-5xl font-black italic tracking-tighter uppercase font-display text-white">
-            PROTEÍNA PREMIUM
+            {content.headline}
           </h2>
           <p className="mt-3 text-lg sm:text-xl text-neutral-300 font-display italic tracking-wide">
-            "Construida para quienes entrenan con un objetivo."
+            "{content.tagline}"
           </p>
         </div>
 
@@ -134,24 +195,24 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
             {/* Title & Rating */}
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="text-xs font-mono uppercase tracking-widest text-lime-400 font-bold">
-                KINETIC PERFORMANCE // CFM SERIES
+                {content.micro_label}
               </span>
               <div className="flex items-center space-x-1 text-amber-400">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className="w-4 h-4 fill-amber-400" />
                 ))}
                 <span className="text-xs font-semibold text-neutral-300 ml-1">
-                  4.9 (342 reseñas)
+                  {product.rating.toFixed(1)}
                 </span>
               </div>
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-black italic uppercase font-display text-white tracking-tight">
-              {FLAGSHIP_PROTEIN.name}
+              {product.name}
             </h1>
 
             <p className="mt-3 text-neutral-300 text-sm leading-relaxed">
-              {FLAGSHIP_PROTEIN.description}
+              {product.description}
             </p>
 
             {/* Pricing Section */}
@@ -183,7 +244,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
               </label>
               
               <div className="rounded-2xl border border-neutral-700/80 bg-neutral-900/90 overflow-hidden shadow-lg grid grid-cols-3 divide-x divide-neutral-800">
-                {FLAGSHIP_PROTEIN.sizes!.map((size) => {
+                {product.sizes!.map((size) => {
                   const isSelected = currentSize.id === size.id;
                   const hasDiscount = size.originalPrice > size.price;
 
@@ -224,7 +285,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
                 2. Selecciona Sabor: <span className="text-lime-400 font-bold">{selectedFlavor.name}</span>
               </label>
               <div className="grid grid-cols-2 gap-2.5">
-                {FLAGSHIP_PROTEIN.flavors!.map((flavor) => (
+                {product.flavors!.map((flavor) => (
                   <button
                     key={flavor.id}
                     type="button"
@@ -292,21 +353,21 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
 
             {/* Security and Trust Guarantees */}
             <div className="mt-8 pt-6 border-t border-neutral-800/80 grid grid-cols-3 gap-3 text-center">
-              <div className="flex flex-col items-center text-center">
-                <Truck className="w-4 h-4 text-lime-400 mb-1" />
-                <span className="text-[11px] font-bold text-neutral-200">Envío Rápido</span>
-                <span className="text-[9px] text-neutral-400">24-48 hrs hábiles</span>
-              </div>
-              <div className="flex flex-col items-center text-center border-x border-neutral-800">
-                <ShieldCheck className="w-4 h-4 text-lime-400 mb-1" />
-                <span className="text-[11px] font-bold text-neutral-200">Pago Seguro</span>
-                <span className="text-[9px] text-neutral-400">Encriptación SSL</span>
-              </div>
-              <div className="flex flex-col items-center text-center">
-                <RefreshCw className="w-4 h-4 text-lime-400 mb-1" />
-                <span className="text-[11px] font-bold text-neutral-200">Satisfacción</span>
-                <span className="text-[9px] text-neutral-400">100% Garantizada</span>
-              </div>
+              {guaranteeItems.map((guarantee, idx) => {
+                const Icon = GUARANTEE_ICONS[guarantee.icon] ?? ShieldCheck;
+                return (
+                  <div
+                    key={guarantee.id}
+                    className={`flex flex-col items-center text-center ${
+                      idx === 1 ? 'border-x border-neutral-800' : ''
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 text-lime-400 mb-1" />
+                    <span className="text-[11px] font-bold text-neutral-200">{guarantee.title}</span>
+                    <span className="text-[9px] text-neutral-400">{guarantee.subtitle}</span>
+                  </div>
+                );
+              })}
             </div>
 
           </div>
@@ -356,18 +417,18 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-neutral-300">
               <div>
                 <h4 className="font-bold text-white font-display text-base uppercase mb-2">
-                  Aislamiento por Flujo Cruzado (CFM)
+                  {content.formula_heading}
                 </h4>
                 <p className="leading-relaxed text-xs sm:text-sm text-neutral-400">
-                  {FLAGSHIP_PROTEIN.longDescription}
+                  {product.longDescription}
                 </p>
               </div>
               <div>
                 <h4 className="font-bold text-white font-display text-base uppercase mb-2">
-                  Ventajas Clave
+                  {content.advantages_heading}
                 </h4>
                 <ul className="space-y-2 text-xs sm:text-sm">
-                  {FLAGSHIP_PROTEIN.features.map((feat, i) => (
+                  {product.features.map((feat, i) => (
                     <li key={i} className="flex items-center gap-2">
                       <Check className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
                       <span>{feat}</span>
@@ -385,7 +446,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
                 <span>Valores referenciales calculados para formato {currentSize.name} ({currentSize.weight}):</span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {FLAGSHIP_PROTEIN.nutritionFacts!.map((fact, idx) => {
+                {(product.nutritionFacts ?? []).map((fact, idx) => {
                   const displayValue = fact.label === 'Porciones por Envase'
                     ? `${currentSize.servings} Porciones (${currentSize.name})`
                     : fact.value;
@@ -410,24 +471,12 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
 
           {activeTab === 'usage' && (
             <div className="text-sm text-neutral-300 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-                <div className="font-bold text-lime-400 font-display text-base uppercase mb-1">Post-Entrenamiento</div>
-                <p className="text-xs text-neutral-400">
-                  Tomar dentro de los 30-45 minutos posteriores a finalizar el entrenamiento para optimizar la síntesis proteica muscular.
-                </p>
-              </div>
-              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-                <div className="font-bold text-lime-400 font-display text-base uppercase mb-1">En el Desayuno</div>
-                <p className="text-xs text-neutral-400">
-                  Ideal para romper el ayuno nocturno con una fuente de aminoácidos limpia de absorción inmediata.
-                </p>
-              </div>
-              <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-                <div className="font-bold text-lime-400 font-display text-base uppercase mb-1">Preparación</div>
-                <p className="text-xs text-neutral-400">
-                  Disolver 1 scoop (30g) en 250ml de agua fría o leche vegetal en tu shaker durante 10 segundos.
-                </p>
-              </div>
+              {usageTipItems.map((tip) => (
+                <div key={tip.id} className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
+                  <div className="font-bold text-lime-400 font-display text-base uppercase mb-1">{tip.title}</div>
+                  <p className="text-xs text-neutral-400">{tip.body}</p>
+                </div>
+              ))}
             </div>
           )}
 

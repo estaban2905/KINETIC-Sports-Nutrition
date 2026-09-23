@@ -10,7 +10,14 @@ import {
 } from "@medusajs/medusa/core-flows"
 
 type SeedFlavor = { id: string; name: string }
-type SeedSize = { id: string; name: string; price: number }
+type SeedSize = {
+  id: string
+  name: string
+  price: number
+  originalPrice?: number
+  weight?: string
+  servings?: number
+}
 
 type SeedProduct = {
   handle: string
@@ -49,9 +56,30 @@ const PRODUCTS: SeedProduct[] = [
       { id: "strawberry", name: "Delicious Strawberry" },
     ],
     sizes: [
-      { id: "310g", name: "310 gr", price: 32990 },
-      { id: "2lb", name: "2 Libras", price: 65990 },
-      { id: "5lb", name: "5 Libras", price: 106990 },
+      {
+        id: "310g",
+        name: "310 gr",
+        price: 32990,
+        originalPrice: 34990,
+        weight: "10.9 OZ (310 G)",
+        servings: 10,
+      },
+      {
+        id: "2lb",
+        name: "2 Libras",
+        price: 65990,
+        originalPrice: 65990,
+        weight: "2 LB (907 G)",
+        servings: 29,
+      },
+      {
+        id: "5lb",
+        name: "5 Libras",
+        price: 106990,
+        originalPrice: 107990,
+        weight: "5 LB (2.27 KG)",
+        servings: 74,
+      },
     ],
   },
   {
@@ -187,11 +215,24 @@ export default async function seedKineticProducts({
 
         const title = [flavor.name, size.name].filter(Boolean).join(" / ") || "Único"
 
+        // Display-only extras the storefront reads via variant.metadata (see
+        // apps/storefront/src/lib/medusa.ts mapMedusaProductToProduct) —
+        // Medusa's variant model has no native "weight label"/"servings"/
+        // "compare-at price" fields, so these live in plain metadata instead
+        // of a custom module, same as any other merchandising-only value.
+        const metadata: Record<string, unknown> = {}
+        if (size.weight) metadata.weight = size.weight
+        if (size.servings) metadata.servings = size.servings
+        if (size.originalPrice && size.originalPrice !== size.price) {
+          metadata.original_price = size.originalPrice
+        }
+
         return {
           title,
           sku: `${p.handle}-${flavor.id}-${size.id}`.toUpperCase(),
           options: optionValues,
           prices: [{ currency_code: "clp", amount: size.price }],
+          ...(Object.keys(metadata).length ? { metadata } : {}),
         }
       })
     )

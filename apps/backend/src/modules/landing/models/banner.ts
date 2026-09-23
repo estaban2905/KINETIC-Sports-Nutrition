@@ -4,6 +4,7 @@ const Banner = model.define("landing_banner", {
   id: model.id().primaryKey(),
   title: model.text(),
   subtitle: model.text(),
+  tag: model.text().nullable(),
   image_url: model.text(),
   button_text: model.text().default("Ver Oferta"),
   button_url: model.text().default("#oferta"),

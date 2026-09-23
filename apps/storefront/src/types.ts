@@ -32,20 +32,11 @@ export interface Product {
   originalPrice?: number;
   badge?: string;
   rating: number;
-  reviewsCount: number;
   image: string;
   flavors?: ProductFlavor[];
   sizes?: ProductSize[];
   features: string[];
   nutritionFacts?: NutritionFact[];
-}
-
-export interface CartItem {
-  product: Product;
-  selectedFlavor?: ProductFlavor;
-  selectedSize?: ProductSize;
-  quantity: number;
-  unitPrice: number;
 }
 
 export interface Testimonial {

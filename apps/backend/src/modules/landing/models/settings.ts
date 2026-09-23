@@ -14,11 +14,16 @@ const Settings = model.define("landing_settings", {
   contact_email: model.text(),
   shipping_information: model.text(),
   footer_text: model.text(),
+  footer_description: model.text().nullable(),
   privacy_policy: model.text().nullable(),
   terms_and_conditions: model.text().nullable(),
   seo_title: model.text(),
   seo_description: model.text(),
   og_image: model.text().nullable(),
+  whatsapp_message_template: model.text().nullable(),
+  whatsapp_tooltip_text: model.text().nullable(),
+  offer_fallback_headline: model.text().nullable(),
+  offer_fallback_subtitle: model.text().nullable(),
 })
 
 export default Settings

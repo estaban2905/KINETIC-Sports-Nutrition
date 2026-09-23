@@ -1,8 +1,58 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Zap, Instagram, MessageCircle, ArrowUp, ShieldCheck } from 'lucide-react';
+import { LandingSettings, LandingNavLink, getLandingNavLinks } from '../lib/landing';
 
-export const Footer: React.FC = () => {
+const FALLBACK_BRAND_NAME = 'KINETIC';
+const FALLBACK_BRAND_TAGLINE = 'SPORTS NUTRITION';
+const FALLBACK_COPYRIGHT = `© ${new Date().getFullYear()} KINETIC Sports Nutrition. Todos los derechos reservados.`;
+const FALLBACK_WHATSAPP = '56912345678';
+const FALLBACK_CONTACT_EMAIL = 'contacto@kineticnutrition.com';
+const FALLBACK_BRAND_DESCRIPTION =
+  'Nutrición deportiva diseñada con precisión científica para atletas y personas comprometidas con su máximo rendimiento físico.';
+
+const FALLBACK_PRODUCT_LINKS: LandingNavLink[] = [
+  { id: 'fallback-1', label: 'KINETIC Iso-Whey Pro', url: '#producto', group: 'footer_productos' },
+  { id: 'fallback-2', label: 'Creatina Creapure®', url: '#productos', group: 'footer_productos' },
+  { id: 'fallback-3', label: 'Pre-Workout Nitro', url: '#productos', group: 'footer_productos' },
+  { id: 'fallback-4', label: 'Shaker Pro Steel', url: '#productos', group: 'footer_productos' },
+  { id: 'fallback-5', label: 'Barras Proteicas', url: '#productos', group: 'footer_productos' },
+];
+
+const FALLBACK_SUPPORT_LINKS: LandingNavLink[] = [
+  { id: 'fallback-1', label: 'Preguntas Frecuentes', url: '#faq', group: 'footer_soporte' },
+  { id: 'fallback-2', label: 'Modo de Preparación', url: '#beneficios', group: 'footer_soporte' },
+  { id: 'fallback-3', label: 'Políticas de Envíos', url: '#faq', group: 'footer_soporte' },
+  { id: 'fallback-4', label: 'Medios de Pago', url: '#faq', group: 'footer_soporte' },
+];
+
+const FALLBACK_LEGAL_LINKS: LandingNavLink[] = [
+  { id: 'fallback-1', label: 'Garantía de Satisfacción', url: '#', group: 'footer_legal' },
+  { id: 'fallback-2', label: 'Políticas de Devolución', url: '#', group: 'footer_legal' },
+];
+
+interface FooterProps {
+  settings: LandingSettings | null;
+}
+
+export const Footer: React.FC<FooterProps> = ({ settings }) => {
+  const [brandName, ...brandTaglineParts] = (settings?.brand_name ?? FALLBACK_BRAND_NAME).split(' ');
+  const brandTagline = brandTaglineParts.length
+    ? brandTaglineParts.join(' ').toUpperCase()
+    : FALLBACK_BRAND_TAGLINE;
+  const whatsappDigits = (settings?.whatsapp_number ?? FALLBACK_WHATSAPP).replace(/[^0-9]/g, '');
+  const contactEmail = settings?.contact_email ?? FALLBACK_CONTACT_EMAIL;
+
+  const [productLinks, setProductLinks] = useState<LandingNavLink[] | null>(null);
+  const [supportLinks, setSupportLinks] = useState<LandingNavLink[] | null>(null);
+  const [legalLinks, setLegalLinks] = useState<LandingNavLink[] | null>(null);
+
+  useEffect(() => {
+    getLandingNavLinks('footer_productos').then(setProductLinks);
+    getLandingNavLinks('footer_soporte').then(setSupportLinks);
+    getLandingNavLinks('footer_legal').then(setLegalLinks);
+  }, []);
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -22,21 +72,21 @@ export const Footer: React.FC = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-xl font-black italic tracking-tight uppercase font-display text-white">
-                  KINETIC
+                  {brandName}
                 </span>
                 <span className="text-[8px] font-mono tracking-[0.2em] text-neutral-400 uppercase -mt-0.5">
-                  SPORTS NUTRITION
+                  {brandTagline}
                 </span>
               </div>
             </a>
 
             <p className="text-neutral-400 leading-relaxed max-w-sm text-xs mb-6">
-              Nutrición deportiva diseñada con precisión científica para atletas y personas comprometidas con su máximo rendimiento físico.
+              {settings?.footer_description ?? FALLBACK_BRAND_DESCRIPTION}
             </p>
 
             <div className="flex items-center space-x-3">
               <a
-                href="https://instagram.com"
+                href={settings?.instagram_url ?? 'https://instagram.com'}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
@@ -45,7 +95,7 @@ export const Footer: React.FC = () => {
                 <Instagram className="w-4 h-4" />
               </a>
               <a
-                href="https://tiktok.com"
+                href={settings?.tiktok_url ?? 'https://tiktok.com'}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="TikTok"
@@ -54,7 +104,7 @@ export const Footer: React.FC = () => {
                 <span className="font-mono text-xs">TT</span>
               </a>
               <a
-                href="https://wa.me/56912345678"
+                href={`https://wa.me/${whatsappDigits}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="WhatsApp"
@@ -71,31 +121,13 @@ export const Footer: React.FC = () => {
               Productos
             </h4>
             <ul className="space-y-2.5">
-              <li>
-                <a href="#producto" className="hover:text-lime-400 transition-colors">
-                  KINETIC Iso-Whey Pro
-                </a>
-              </li>
-              <li>
-                <a href="#productos" className="hover:text-lime-400 transition-colors">
-                  Creatina Creapure®
-                </a>
-              </li>
-              <li>
-                <a href="#productos" className="hover:text-lime-400 transition-colors">
-                  Pre-Workout Nitro
-                </a>
-              </li>
-              <li>
-                <a href="#productos" className="hover:text-lime-400 transition-colors">
-                  Shaker Pro Steel
-                </a>
-              </li>
-              <li>
-                <a href="#productos" className="hover:text-lime-400 transition-colors">
-                  Barras Proteicas
-                </a>
-              </li>
+              {(productLinks && productLinks.length > 0 ? productLinks : FALLBACK_PRODUCT_LINKS).map((link) => (
+                <li key={link.id}>
+                  <a href={link.url} className="hover:text-lime-400 transition-colors">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -105,34 +137,21 @@ export const Footer: React.FC = () => {
               Soporte
             </h4>
             <ul className="space-y-2.5">
-              <li>
-                <a href="#faq" className="hover:text-lime-400 transition-colors">
-                  Preguntas Frecuentes
-                </a>
-              </li>
-              <li>
-                <a href="#beneficios" className="hover:text-lime-400 transition-colors">
-                  Modo de Preparación
-                </a>
-              </li>
-              <li>
-                <a href="#faq" className="hover:text-lime-400 transition-colors">
-                  Políticas de Envíos
-                </a>
-              </li>
+              {(supportLinks && supportLinks.length > 0 ? supportLinks : FALLBACK_SUPPORT_LINKS).map((link) => (
+                <li key={link.id}>
+                  <a href={link.url} className="hover:text-lime-400 transition-colors">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
               <li>
                 <Link to="/seguimiento" className="hover:text-lime-400 transition-colors">
                   Seguimiento de Pedido
                 </Link>
               </li>
               <li>
-                <a href="#faq" className="hover:text-lime-400 transition-colors">
-                  Medios de Pago
-                </a>
-              </li>
-              <li>
-                <a href="mailto:contacto@kineticnutrition.com" className="hover:text-lime-400 transition-colors">
-                  contacto@kineticnutrition.com
+                <a href={`mailto:${contactEmail}`} className="hover:text-lime-400 transition-colors">
+                  {contactEmail}
                 </a>
               </li>
             </ul>
@@ -145,25 +164,22 @@ export const Footer: React.FC = () => {
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <a href="#" className="hover:text-lime-400 transition-colors">
+                <a href={settings?.terms_and_conditions ?? '#'} className="hover:text-lime-400 transition-colors">
                   Términos y Condiciones
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-lime-400 transition-colors">
+                <a href={settings?.privacy_policy ?? '#'} className="hover:text-lime-400 transition-colors">
                   Política de Privacidad
                 </a>
               </li>
-              <li>
-                <a href="#" className="hover:text-lime-400 transition-colors">
-                  Garantía de Satisfacción
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-lime-400 transition-colors">
-                  Políticas de Devolución
-                </a>
-              </li>
+              {(legalLinks && legalLinks.length > 0 ? legalLinks : FALLBACK_LEGAL_LINKS).map((link) => (
+                <li key={link.id}>
+                  <a href={link.url} className="hover:text-lime-400 transition-colors">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -172,7 +188,7 @@ export const Footer: React.FC = () => {
         {/* Bottom Bar: Copyright, Payment Badges & Back to top */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-neutral-500">
           <div>
-            © {new Date().getFullYear()} KINETIC Sports Nutrition. Todos los derechos reservados.
+            {settings?.footer_text ?? FALLBACK_COPYRIGHT}
           </div>
 
           <div className="flex items-center gap-3 text-neutral-400">

@@ -1,17 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, Zap, ShieldCheck } from 'lucide-react';
-import { ProductFlavor, ProductSize } from '../types';
-import { FLAGSHIP_PROTEIN } from '../data/products';
+import { Product, ProductFlavor, ProductSize } from '../types';
+import { getLandingFinalCta, LandingFinalCta } from '../lib/landing';
+
+const FALLBACK_BADGE_TEXT = 'MÁXIMA CALIDAD COMPROBADA';
+const FALLBACK_HEADLINE = '¿LISTO PARA SUBIR DE';
+const FALLBACK_HEADLINE_HIGHLIGHT = 'NIVEL?';
+const FALLBACK_SUBTEXT = 'Equipa tu entrenamiento con productos diseñados para acompañar tus objetivos. Sin rellenos, sin compromisos.';
+const FALLBACK_GUARANTEE_TEXT = 'Garantía de Satisfacción 30 Días';
+const FALLBACK_CTA_TEXT = 'COMPRAR AHORA';
 
 interface FinalCTAProps {
+  product: Product;
   onBuyNow: () => void;
   selectedFlavor?: ProductFlavor;
   selectedSize?: ProductSize;
 }
 
-export const FinalCTA: React.FC<FinalCTAProps> = ({ onBuyNow, selectedFlavor, selectedSize }) => {
-  const currentSize = selectedSize || FLAGSHIP_PROTEIN.sizes![1];
+export const FinalCTA: React.FC<FinalCTAProps> = ({ product, onBuyNow, selectedFlavor, selectedSize }) => {
+  const currentSize = selectedSize || product.sizes![1];
+  const [content, setContent] = useState<LandingFinalCta | null>(null);
+
+  useEffect(() => {
+    getLandingFinalCta().then(setContent);
+  }, []);
   return (
     <section className="relative py-28 bg-neutral-950 overflow-hidden border-t border-neutral-900">
       
@@ -33,18 +46,18 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onBuyNow, selectedFlavor, se
               
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-lime-400/10 border border-lime-400/30 text-lime-400 text-xs font-mono uppercase tracking-widest mb-6">
                 <Zap className="w-3.5 h-3.5 fill-lime-400/20" />
-                <span>MÁXIMA CALIDAD COMPROBADA</span>
+                <span>{content?.badge_text || FALLBACK_BADGE_TEXT}</span>
               </div>
 
               <h2 className="text-4xl sm:text-6xl xl:text-7xl font-black italic tracking-tighter uppercase font-display text-white leading-none">
-                ¿LISTO PARA SUBIR DE{' '}
+                {content?.headline || FALLBACK_HEADLINE}{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 via-lime-300 to-emerald-400 inline-block pr-2 pb-1">
-                  NIVEL?
+                  {content?.headline_highlight || FALLBACK_HEADLINE_HIGHLIGHT}
                 </span>
               </h2>
 
               <p className="mt-6 text-base sm:text-lg text-neutral-300 max-w-xl leading-relaxed">
-                Equipa tu entrenamiento con productos diseñados para acompañar tus objetivos. Sin rellenos, sin compromisos.
+                {content?.subtext || FALLBACK_SUBTEXT}
               </p>
 
               <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
@@ -53,13 +66,13 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onBuyNow, selectedFlavor, se
                   onClick={onBuyNow}
                   className="w-full sm:w-auto px-10 py-5 rounded-xl bg-lime-400 hover:bg-lime-300 text-neutral-950 font-black font-display text-xl uppercase tracking-wider shadow-[0_0_35px_rgba(163,230,53,0.35)] hover:shadow-[0_0_45px_rgba(163,230,53,0.5)] transition-all flex items-center justify-center gap-3 group active:scale-[0.98]"
                 >
-                  <span>COMPRAR AHORA</span>
+                  <span>{content?.cta_text || FALLBACK_CTA_TEXT}</span>
                   <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </button>
 
                 <div className="flex items-center gap-2 text-xs text-neutral-400 font-mono">
                   <ShieldCheck className="w-4 h-4 text-lime-400" />
-                  <span>Garantía de Satisfacción 30 Días</span>
+                  <span>{content?.guarantee_text || FALLBACK_GUARANTEE_TEXT}</span>
                 </div>
               </div>
 
@@ -73,8 +86,8 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ onBuyNow, selectedFlavor, se
                   style={{ backgroundColor: selectedFlavor?.accentHex || '#dc2626' }}
                 />
                 <img
-                  src={FLAGSHIP_PROTEIN.image}
-                  alt={FLAGSHIP_PROTEIN.name}
+                  src={product.image}
+                  alt={product.name}
                   loading="lazy"
                   decoding="async"
                   width={340}

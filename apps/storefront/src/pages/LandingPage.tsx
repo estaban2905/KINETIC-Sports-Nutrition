@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navbar } from '../components/Navbar';
 import { Hero } from '../components/Hero';
 import { Benefits } from '../components/Benefits';
@@ -11,9 +11,11 @@ import { FAQ } from '../components/FAQ';
 import { FinalCTA } from '../components/FinalCTA';
 import { Footer } from '../components/Footer';
 import { WhatsAppButton } from '../components/WhatsAppButton';
-import { FLAGSHIP_PROTEIN } from '../data/products';
+import { FLAGSHIP_PROTEIN, FEATURED_PRODUCTS } from '../data/products';
 import { Product, ProductFlavor, ProductSize } from '../types';
 import { useCart } from '../context/CartContext';
+import { getProductCatalog } from '../lib/medusa';
+import { getLandingSettings, LandingSettings } from '../lib/landing';
 
 // Lazy load non-critical and overlay components for faster initial page load
 const CartDrawer = React.lazy(() => import('../components/CartDrawer').then(m => ({ default: m.CartDrawer })));
@@ -22,6 +24,53 @@ const QuickViewModal = React.lazy(() => import('../components/QuickViewModal').t
 export function LandingPage() {
   const { itemCount, addItem, error } = useCart();
 
+  // Real Medusa catalog once it loads; until then (or if the fetch fails) the
+  // static catalog below keeps the page fully functional.
+  const [catalog, setCatalog] = useState<Product[] | null>(null);
+
+  useEffect(() => {
+    getProductCatalog()
+      .then((products) => {
+        if (products.length) setCatalog(products);
+      })
+      .catch(() => {
+        // Static fallback below already covers this — nothing else to do.
+      });
+  }, []);
+
+  // Fetched once here and passed down to Navbar/Footer/WhatsAppButton — each
+  // used to call getLandingSettings() independently, which meant 4 identical
+  // requests per page load for the same site-wide config.
+  const [settings, setSettings] = useState<LandingSettings | null>(null);
+
+  useEffect(() => {
+    getLandingSettings().then(setSettings);
+  }, []);
+
+  // Overrides the static <title>/meta description in index.html once Medusa
+  // settings load — those stay as the pre-JS fallback for crawlers/social
+  // unfurlers that don't execute scripts.
+  useEffect(() => {
+    if (!settings) return;
+    if (settings.seo_title) document.title = settings.seo_title;
+    if (settings.seo_description) {
+      document
+        .querySelector('meta[name="description"]')
+        ?.setAttribute('content', settings.seo_description);
+      document
+        .querySelector('meta[property="og:title"]')
+        ?.setAttribute('content', settings.seo_title || settings.brand_name);
+      document
+        .querySelector('meta[property="og:description"]')
+        ?.setAttribute('content', settings.seo_description);
+    }
+  }, [settings]);
+
+  const flagship = catalog?.find((p) => p.id === FLAGSHIP_PROTEIN.id) ?? FLAGSHIP_PROTEIN;
+  const featuredProducts = catalog
+    ? catalog.filter((p) => p.id !== flagship.id)
+    : FEATURED_PRODUCTS;
+
   // Flagship state
   const [selectedFlavor, setSelectedFlavor] = useState<ProductFlavor>(
     FLAGSHIP_PROTEIN.flavors![0]
@@ -29,6 +78,15 @@ export function LandingPage() {
   const [selectedSize, setSelectedSize] = useState<ProductSize>(
     FLAGSHIP_PROTEIN.sizes![1] // Default to 2 Libras ($65.990)
   );
+
+  // Once the real flagship product loads, reset the selection to its first
+  // flavor/size — the static defaults above may not exist in Medusa's data.
+  useEffect(() => {
+    if (!catalog) return;
+    if (flagship.flavors?.[0]) setSelectedFlavor(flagship.flavors[0]);
+    if (flagship.sizes) setSelectedSize(flagship.sizes[1] ?? flagship.sizes[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalog]);
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
@@ -87,6 +145,7 @@ export function LandingPage() {
       <Navbar
         cartCount={itemCount}
         onOpenCart={() => setIsCartOpen(true)}
+        settings={settings}
       />
 
       {/* Main Content Sections */}
@@ -105,6 +164,7 @@ export function LandingPage() {
 
         {/* 3. Dedicated Flagship Product Section */}
         <ProductSection
+          product={flagship}
           onAddToCart={handleAddFlagshipToCart}
           selectedFlavor={selectedFlavor}
           onSelectFlavor={setSelectedFlavor}
@@ -117,12 +177,14 @@ export function LandingPage() {
 
         {/* 5. Featured Products Section ("COMPLETA TU ENTRENAMIENTO") */}
         <FeaturedProducts
+          products={featuredProducts}
           onQuickView={(p) => setQuickViewProduct(p)}
           onAddToCartDirect={(p) => handleAddProductDirect(p)}
         />
 
         {/* 6. Special High-Impact Offer with Countdown */}
         <SpecialOffer
+          product={flagship}
           onClaimOffer={handleClaimOffer}
           selectedFlavor={selectedFlavor}
           selectedSize={selectedSize}
@@ -136,6 +198,7 @@ export function LandingPage() {
 
         {/* 9. Final CTA with Product Display */}
         <FinalCTA
+          product={flagship}
           onBuyNow={handleBuyNow}
           selectedFlavor={selectedFlavor}
           selectedSize={selectedSize}
@@ -144,7 +207,7 @@ export function LandingPage() {
       </main>
 
       {/* 10. Comprehensive Footer */}
-      <Footer />
+      <Footer settings={settings} />
 
       <React.Suspense fallback={null}>
         {/* Slide-out Cart Drawer with real Medusa checkout */}
@@ -166,7 +229,7 @@ export function LandingPage() {
       </React.Suspense>
 
       {/* Floating WhatsApp Support Button */}
-      <WhatsAppButton />
+      <WhatsAppButton settings={settings} />
 
       {/* Error toast: shown when the cart couldn't reach the Medusa backend */}
       {showErrorToast && error && (

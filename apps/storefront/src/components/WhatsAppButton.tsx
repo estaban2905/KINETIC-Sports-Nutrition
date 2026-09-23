@@ -1,15 +1,23 @@
 import React, { useState } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { LandingSettings } from '../lib/landing';
 
-export const WhatsAppButton: React.FC = () => {
+const FALLBACK_PHONE = '56912345678';
+const FALLBACK_MESSAGE = '¡Hola! Me gustaría hacer una consulta sobre la Proteína Premium KINETIC y los envíos.';
+const FALLBACK_TOOLTIP = '¿Dudas con tu suplementación? Chatea con un asesor';
+
+interface WhatsAppButtonProps {
+  settings: LandingSettings | null;
+}
+
+export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({ settings }) => {
   const [showTooltip, setShowTooltip] = useState(true);
+  const phoneNumber = (settings?.whatsapp_number ?? FALLBACK_PHONE).replace(/[^0-9]/g, '');
 
-  const phoneNumber = '56912345678';
-  const message = encodeURIComponent(
-    '¡Hola! Me gustaría hacer una consulta sobre la Proteína Premium KINETIC y los envíos.'
-  );
+  const message = encodeURIComponent(settings?.whatsapp_message_template ?? FALLBACK_MESSAGE);
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+  const tooltipText = settings?.whatsapp_tooltip_text ?? FALLBACK_TOOLTIP;
 
   return (
     <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
@@ -23,7 +31,7 @@ export const WhatsAppButton: React.FC = () => {
             className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-200 text-xs shadow-2xl backdrop-blur-md"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>¿Dudas con tu suplementación? Chatea con un asesor</span>
+            <span>{tooltipText}</span>
             <button
               onClick={() => setShowTooltip(false)}
               className="text-neutral-500 hover:text-white ml-1 p-0.5"

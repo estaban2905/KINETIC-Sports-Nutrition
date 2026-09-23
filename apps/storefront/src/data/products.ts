@@ -11,7 +11,6 @@ export const FLAGSHIP_PROTEIN: Product = {
   originalPrice: 68990,
   badge: 'OFERTA ESPECIAL',
   rating: 4.9,
-  reviewsCount: 488,
   image: 'https://images.unsplash.com/photo-1579722821273-0f6c7d44362f?auto=format&fit=crop&w=500&q=75',
   flavors: [
     { id: 'choco', name: 'Double Rich Chocolate', color: 'bg-red-600', accentHex: '#dc2626', badge: 'MÁS POPULAR' },
@@ -77,7 +76,6 @@ export const FEATURED_PRODUCTS: Product[] = [
     originalPrice: 31990,
     badge: 'TOP VENTAS',
     rating: 5.0,
-    reviewsCount: 189,
     image: 'https://images.unsplash.com/photo-1593095948071-474c5cc2989d?auto=format&fit=crop&w=500&q=75',
     features: ['5g de creatina Creapure® pura', 'Micronizado ultra fino 200 Mesh', 'Sin sabor, ideal para mezclar', '60 porciones']
   },
@@ -92,7 +90,6 @@ export const FEATURED_PRODUCTS: Product[] = [
     originalPrice: 42990,
     badge: 'NUEVA FÓRMULA',
     rating: 4.8,
-    reviewsCount: 94,
     image: 'https://images.unsplash.com/photo-1579722821273-0f6c7d44362f?auto=format&fit=crop&w=500&q=75',
     flavors: [
       { id: 'blue-ice', name: 'Blue Raspberry Ice', color: 'bg-cyan-900', accentHex: '#06b6d4' },
@@ -111,7 +108,6 @@ export const FEATURED_PRODUCTS: Product[] = [
     originalPrice: 24990,
     badge: 'INDISPENSABLE',
     rating: 4.9,
-    reviewsCount: 215,
     image: 'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=500&q=75',
     features: ['750ml de capacidad', 'Doble pared térmica al vacío', 'Libre de BPA y olores', 'Boquilla con cierre seguro']
   },
@@ -125,7 +121,6 @@ export const FEATURED_PRODUCTS: Product[] = [
     price: 24990,
     originalPrice: 29990,
     rating: 4.7,
-    reviewsCount: 120,
     image: 'https://images.unsplash.com/photo-1622484216805-f932822a967f?auto=format&fit=crop&w=500&q=75',
     flavors: [
       { id: 'caramel', name: 'Caramelo Salado Crunch', color: 'bg-amber-900', accentHex: '#b45309' },
@@ -143,7 +138,6 @@ export const FEATURED_PRODUCTS: Product[] = [
     price: 14990,
     originalPrice: 19990,
     rating: 4.9,
-    reviewsCount: 165,
     image: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=500&q=75',
     features: ['Algodón resistente de 60cm', 'Acolchado de neopreno de 5mm', 'Costuras reforzadas', 'Talla única universal']
   },
@@ -157,7 +151,6 @@ export const FEATURED_PRODUCTS: Product[] = [
     price: 22990,
     originalPrice: 28990,
     rating: 4.8,
-    reviewsCount: 88,
     image: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=500&q=75',
     features: ['Tejido Dry-Performance 4-way stretch', 'Tratamiento anti-olor permanente', 'Detalles reflectantes de alta visibilidad', 'Tallas S a XXL']
   }

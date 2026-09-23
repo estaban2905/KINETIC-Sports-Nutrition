@@ -1,26 +1,27 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Eye, ShoppingBag, Star, Zap, ArrowRight, Check } from 'lucide-react';
-import { FEATURED_PRODUCTS } from '../data/products';
 import { Product } from '../types';
 
 interface FeaturedProductsProps {
+  products: Product[];
   onQuickView: (product: Product) => void;
   onAddToCartDirect: (product: Product) => void;
 }
 
 export const FeaturedProducts: React.FC<FeaturedProductsProps> = ({
+  products,
   onQuickView,
   onAddToCartDirect
 }) => {
   const [filter, setFilter] = useState<string>('Todos');
   const [addedId, setAddedId] = useState<string | null>(null);
 
-  const categories = ['Todos', 'Rendimiento', 'Energía', 'Accesorios', 'Snacks', 'Ropa'];
+  const categories = ['Todos', ...Array.from(new Set(products.map((p) => p.category)))];
 
   const filteredProducts = filter === 'Todos'
-    ? FEATURED_PRODUCTS
-    : FEATURED_PRODUCTS.filter(p => p.category === filter);
+    ? products
+    : products.filter(p => p.category === filter);
 
   const handleAdd = (p: Product) => {
     onAddToCartDirect(p);
