@@ -139,6 +139,10 @@ module.exports = defineConfig({
               fallbackRate: process.env.CHILEXPRESS_FALLBACK_RATE
                 ? Number(process.env.CHILEXPRESS_FALLBACK_RATE)
                 : undefined,
+              // Separate subscription/key from CHILEXPRESS_API_KEY — resolves
+              // the customer's comuna to a countyCode before rating.
+              coberturaApiKey: process.env.CHILEXPRESS_COBERTURA_API_KEY,
+              coberturaBaseUrl: process.env.CHILEXPRESS_COBERTURA_BASE_URL,
             },
           },
         ],

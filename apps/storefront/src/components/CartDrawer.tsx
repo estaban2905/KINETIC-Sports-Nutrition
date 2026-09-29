@@ -10,6 +10,9 @@ import { HttpTypes } from '@medusajs/types';
 import type { Stripe, StripeCardElement } from '@stripe/stripe-js';
 import { useCart } from '../context/CartContext';
 import { getStripe } from '../lib/stripe';
+import { listComunas } from '../lib/medusa';
+import { validateContactForm, type ContactFormValues } from '../lib/checkoutValidation';
+import { ComunaAutocomplete } from './ComunaAutocomplete';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -56,7 +59,17 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const [couponCode, setCouponCode] = useState('');
   const [couponFeedback, setCouponFeedback] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
 
-  const [contact, setContact] = useState({ name: '', email: '', phone: '', address: '', city: '' });
+  const [contact, setContact] = useState<ContactFormValues>({
+    name: '', email: '', phone: '', street: '', streetNumber: '', apartment: '', city: '',
+  });
+  const [touched, setTouched] = useState<Partial<Record<keyof ContactFormValues, boolean>>>({});
+  const [comunas, setComunas] = useState<string[]>([]);
+  const contactErrors = validateContactForm(contact, comunas);
+  const markTouched = (field: keyof ContactFormValues) => setTouched((t) => ({ ...t, [field]: true }));
+
+  useEffect(() => {
+    listComunas().then(setComunas);
+  }, []);
   const [shippingOptions, setShippingOptions] = useState<HttpTypes.StoreCartShippingOption[]>([]);
   const [selectedShippingOption, setSelectedShippingOption] = useState<string | null>(null);
   const [paymentProviders, setPaymentProviders] = useState<HttpTypes.StorePaymentProvider[]>([]);
@@ -145,6 +158,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (Object.keys(contactErrors).length > 0) {
+      setTouched({
+        name: true, email: true, phone: true, street: true, streetNumber: true, city: true,
+      });
+      return;
+    }
     setIsSubmitting(true);
     setCheckoutError(null);
     try {
@@ -154,10 +173,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
         shipping_address: {
           first_name: first_name || contact.name,
           last_name: rest.join(' ') || first_name || contact.name,
-          address_1: contact.address,
-          city: contact.city,
+          address_1: `${contact.street.trim()} ${contact.streetNumber.trim()}`,
+          address_2: contact.apartment.trim() || undefined,
+          city: contact.city.trim(),
           country_code: 'cl',
-          phone: contact.phone,
+          phone: contact.phone.trim(),
         },
       });
       setStep('shipping');
@@ -422,15 +442,59 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
                 {step === 'address' && (
                   <form onSubmit={handleAddressSubmit} className="space-y-3">
-                    <Field label="Nombre Completo" value={contact.name} onChange={(v) => setContact({ ...contact, name: v })} placeholder="Ej: Matías Silva" autoComplete="name" />
-                    <Field label="Correo Electrónico" value={contact.email} onChange={(v) => setContact({ ...contact, email: v })} placeholder="tu@email.com" type="email" autoComplete="email" />
-                    <Field label="Teléfono / WhatsApp" value={contact.phone} onChange={(v) => setContact({ ...contact, phone: v })} placeholder="+56 9 1234 5678" type="tel" autoComplete="tel" />
-                    <Field label="Dirección de Entrega" value={contact.address} onChange={(v) => setContact({ ...contact, address: v })} placeholder="Calle, número, depto" autoComplete="street-address" />
-                    <Field label="Ciudad / Comuna" value={contact.city} onChange={(v) => setContact({ ...contact, city: v })} placeholder="Ej: Las Condes, Santiago" autoComplete="address-level2" />
+                    <Field
+                      label="Nombre Completo" value={contact.name} placeholder="Ej: Matías Silva" autoComplete="name"
+                      onChange={(v) => setContact({ ...contact, name: v })}
+                      onBlur={() => markTouched('name')}
+                      error={touched.name ? contactErrors.name : undefined}
+                    />
+                    <Field
+                      label="Correo Electrónico" value={contact.email} placeholder="tu@email.com" type="email" autoComplete="email"
+                      onChange={(v) => setContact({ ...contact, email: v })}
+                      onBlur={() => markTouched('email')}
+                      error={touched.email ? contactErrors.email : undefined}
+                    />
+                    <Field
+                      label="Teléfono / WhatsApp" value={contact.phone} placeholder="+56 9 1234 5678" type="tel" autoComplete="tel"
+                      onChange={(v) => setContact({ ...contact, phone: v })}
+                      onBlur={() => markTouched('phone')}
+                      error={touched.phone ? contactErrors.phone : undefined}
+                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2">
+                        <Field
+                          label="Calle" value={contact.street} placeholder="Ej: Av. Manuel Montt" autoComplete="address-line1"
+                          onChange={(v) => setContact({ ...contact, street: v })}
+                          onBlur={() => markTouched('street')}
+                          error={touched.street ? contactErrors.street : undefined}
+                        />
+                      </div>
+                      <Field
+                        label="Número" value={contact.streetNumber} placeholder="427" autoComplete="off"
+                        onChange={(v) => setContact({ ...contact, streetNumber: v })}
+                        onBlur={() => markTouched('streetNumber')}
+                        error={touched.streetNumber ? contactErrors.streetNumber : undefined}
+                      />
+                    </div>
+                    <Field
+                      label="Depto / Casa (opcional)" value={contact.apartment} placeholder="Depto 301" autoComplete="address-line2"
+                      onChange={(v) => setContact({ ...contact, apartment: v })}
+                    />
+                    <ComunaAutocomplete
+                      value={contact.city}
+                      comunas={comunas}
+                      onChange={(v) => setContact({ ...contact, city: v })}
+                      onBlur={() => markTouched('city')}
+                      error={touched.city ? contactErrors.city : undefined}
+                    />
 
                     {checkoutError && <p className="text-rose-400 text-xs">{checkoutError}</p>}
 
-                    <SubmitButton loading={isSubmitting} label="Continuar a Envío" />
+                    <SubmitButton
+                      loading={isSubmitting}
+                      disabled={Object.keys(contactErrors).length > 0}
+                      label="Continuar a Envío"
+                    />
                   </form>
                 )}
 
@@ -439,26 +503,41 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     {shippingOptions.length === 0 ? (
                       <p className="text-neutral-500 text-xs">Cargando opciones de envío...</p>
                     ) : (
-                      shippingOptions.map((option) => (
-                        <button
-                          key={option.id}
-                          type="button"
-                          onClick={() => handleSelectShippingOption(option.id)}
-                          disabled={isSubmitting}
-                          className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-colors ${
-                            selectedShippingOption === option.id
-                              ? 'border-lime-400 bg-lime-400/10'
-                              : 'border-neutral-800 bg-neutral-900/70 hover:border-neutral-600'
-                          }`}
-                        >
-                          <div>
-                            <p className="text-sm font-bold text-white">{option.name}</p>
-                          </div>
-                          <span className="text-lime-400 font-mono text-sm font-bold">
-                            {currency(option.calculated_price?.calculated_amount ?? 0)}
-                          </span>
-                        </button>
-                      ))
+                      shippingOptions.map((option) => {
+                        const carrier = getShippingCarrierInfo(option);
+                        const route = getShippingRouteLabel(option, cart?.shipping_address?.city ?? undefined);
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => handleSelectShippingOption(option.id)}
+                            disabled={isSubmitting}
+                            className={`w-full flex items-start justify-between gap-3 p-4 rounded-xl border text-left transition-colors ${
+                              selectedShippingOption === option.id
+                                ? 'border-lime-400 bg-lime-400/10'
+                                : 'border-neutral-800 bg-neutral-900/70 hover:border-neutral-600'
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-white">{option.name}</p>
+                              {option.type?.description && (
+                                <p className="text-[11px] text-neutral-400 mt-0.5">{option.type.description}</p>
+                              )}
+                              <p className={`text-[10px] font-mono uppercase mt-1 ${carrier.tracked ? 'text-lime-400' : 'text-amber-400'}`}>
+                                {carrier.label}
+                              </p>
+                              {route && (
+                                <p className="text-[11px] text-neutral-500 mt-1 flex items-center gap-1">
+                                  <Truck className="w-3 h-3 shrink-0" /> {route}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-lime-400 font-mono text-sm font-bold whitespace-nowrap">
+                              {currency(option.calculated_price?.calculated_amount ?? 0)}
+                            </span>
+                          </button>
+                        );
+                      })
                     )}
 
                     {checkoutError && <p className="text-rose-400 text-xs">{checkoutError}</p>}
@@ -599,10 +678,45 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   );
 };
 
+/**
+ * The storefront only ever offers two shipping options today (see
+ * seed-chile.ts): "Envío Estándar" runs on Medusa's built-in `manual_manual`
+ * fulfillment provider — a flat price with zero courier behind it, no
+ * automatic label/tracking. Someone at KINETIC has to physically hand the
+ * package to whatever courier they choose and paste a tracking number into
+ * the order manually if they want one. "Chilexpress" is the only option
+ * actually backed by a real carrier with a live quote and (once
+ * createFulfillment is implemented) an automatic tracking number.
+ */
+function getShippingCarrierInfo(
+  option: HttpTypes.StoreCartShippingOption
+): { label: string; tracked: boolean } {
+  if (option.type?.code === 'chilexpress') {
+    return { label: 'Despachado por Chilexpress · seguimiento automático', tracked: true };
+  }
+  return { label: 'Despacho gestionado por KINETIC · sin seguimiento automático', tracked: false };
+}
+
+// Origin comes from the option's fulfillment set location (the warehouse
+// Medusa is configured to ship from — see stock_location in seed-chile.ts),
+// which listCartOptions already returns nested on the option itself even
+// though StoreCartShippingOption doesn't declare it — that's what
+// StoreCartShippingOptionWithServiceZone is for. Destination is the
+// address the customer just entered.
+function getShippingRouteLabel(
+  option: HttpTypes.StoreCartShippingOption,
+  destinationCity?: string
+): string | null {
+  const originCity = (option as HttpTypes.StoreCartShippingOptionWithServiceZone).service_zone
+    ?.fulfillment_set?.location?.address?.city;
+  if (!originCity || !destinationCity) return null;
+  return `${originCity} → ${destinationCity}`;
+}
+
 function Field({
-  label, value, onChange, placeholder, type = 'text', autoComplete,
+  label, value, onChange, onBlur, placeholder, type = 'text', autoComplete, error,
 }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder: string; type?: string; autoComplete?: string;
+  label: string; value: string; onChange: (v: string) => void; onBlur?: () => void; placeholder: string; type?: string; autoComplete?: string; error?: string;
 }) {
   return (
     <div>
@@ -613,9 +727,13 @@ function Field({
         autoComplete={autoComplete}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
-        className="w-full px-3 py-2.5 bg-neutral-900 border border-neutral-700 rounded-lg text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-lime-400"
+        className={`w-full px-3 py-2.5 bg-neutral-900 border rounded-lg text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-lime-400 ${
+          error ? 'border-rose-500' : 'border-neutral-700'
+        }`}
       />
+      {error && <p className="mt-1 text-[11px] text-rose-400">{error}</p>}
     </div>
   );
 }

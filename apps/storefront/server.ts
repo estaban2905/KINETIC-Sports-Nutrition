@@ -62,8 +62,8 @@ async function startServer() {
   // this browser's localStorage.
   // ==========================================================================
   app.use(express.urlencoded({ extended: true }));
-  app.post("/webpay/return", (req, res) => {
-    const tokenWs = req.body?.token_ws;
+  const handleWebpayReturn = (req: express.Request, res: express.Response) => {
+    const tokenWs = req.body?.token_ws ?? req.query?.token_ws;
     if (typeof tokenWs === "string" && tokenWs) {
       res.redirect(302, `/checkout/confirmar?provider=webpay&token_ws=${encodeURIComponent(tokenWs)}`);
       return;
@@ -71,7 +71,14 @@ async function startServer() {
     // TBK_TOKEN/TBK_ORDEN_COMPRA are sent instead of token_ws when the
     // customer cancels or the form times out on Transbank's side.
     res.redirect(302, "/checkout/confirmar?provider=webpay&cancelled=1");
-  });
+  };
+  // Transbank normally POSTs the return form, but some flows (a user
+  // refreshing/reopening the return link, certain sandbox configs) hit this
+  // URL with GET instead — without a GET handler it fell through to the SPA
+  // catch-all, which has no route for /webpay/return and rendered a blank
+  // page. Handle both methods the same way.
+  app.post("/webpay/return", handleWebpayReturn);
+  app.get("/webpay/return", handleWebpayReturn);
 
   // ==========================================================================
   // VITE MIDDLEWARE / PRODUCTION STATIC FALLBACK

@@ -101,6 +101,27 @@ export async function lookupOrder(
   return order;
 }
 
+let cachedComunas: string[] | null = null;
+
+/**
+ * Comuna list for the checkout address autocomplete, backed by Chilexpress's
+ * coverage data (see apps/backend's /store/comunas route). Cached for the
+ * lifetime of the page — the list only changes if Chilexpress adds/renames
+ * coverage areas, which isn't a same-session concern. Returns [] (never
+ * throws) if the backend isn't configured with Chilexpress credentials yet,
+ * so the address form still works with free text either way.
+ */
+export async function listComunas(): Promise<string[]> {
+  if (cachedComunas) return cachedComunas;
+  try {
+    const { comunas } = await medusa.client.fetch<{ comunas: string[] }>("/store/comunas");
+    cachedComunas = comunas;
+    return comunas;
+  } catch {
+    return [];
+  }
+}
+
 // Cosmetic swatch assigned by position within a product's flavor list — Medusa
 // option values don't carry a color, and it isn't worth a CMS field for it.
 const FLAVOR_PALETTE: { color: string; accentHex: string }[] = [

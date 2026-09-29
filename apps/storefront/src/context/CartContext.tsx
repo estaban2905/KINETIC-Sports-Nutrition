@@ -196,7 +196,32 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const { shipping_options } = await medusa.store.fulfillment.listCartOptions({
       cart_id: cart.id,
     });
-    return shipping_options;
+
+    // Medusa never resolves the price of "calculated" options (e.g. Chilexpress)
+    // as part of listing them — it's a separate request per option, made
+    // explicitly for checkout. Without this, the price always shows as $0
+    // (calculated_price stays null) even though calculatePrice() itself
+    // works fine when the shipping method is actually added to the cart.
+    // See: node_modules/@medusajs/core-flows/dist/cart/workflows/list-shipping-options-for-cart.js
+    // medusa.store.fulfillment.calculate() returns a slimmer shipping_option
+    // (only shipping_option_type_id, no nested `type` relation) — returning
+    // it as-is drops `option.type`, which the storefront's shipping-carrier
+    // label depends on (see getShippingCarrierInfo in CartDrawer.tsx). Merge
+    // just the calculated price onto the original, fully-loaded option.
+    const withCalculatedPrices = await Promise.all(
+      shipping_options.map(async (option) => {
+        if (option.price_type !== "calculated") return option;
+        try {
+          const { shipping_option } = await medusa.store.fulfillment.calculate(option.id, {
+            cart_id: cart.id,
+          });
+          return { ...option, calculated_price: shipping_option.calculated_price };
+        } catch {
+          return option;
+        }
+      })
+    );
+    return withCalculatedPrices;
   }, [cart]);
 
   const addShippingMethod = useCallback(

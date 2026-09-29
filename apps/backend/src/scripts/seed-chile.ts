@@ -137,11 +137,14 @@ export default async function seedChile({
     input: {
       locations: [
         {
-          name: "Bodega Santiago",
+          // Keep in sync with CHILEXPRESS_ORIGIN_CODE/STREET/STREET_NUMBER in
+          // .env — that's the address actually sent to Chilexpress as the
+          // shipment origin, verified against their "Consultar Calles" API.
+          name: "Bodega Ovalle",
           address: {
-            city: "Santiago",
+            city: "Ovalle",
             country_code: "CL",
-            address_1: "",
+            address_1: "Francisco Encina 2212",
           },
         },
       ],

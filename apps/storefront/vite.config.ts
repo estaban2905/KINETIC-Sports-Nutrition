@@ -17,6 +17,18 @@ export default defineConfig(() => {
       // this app's React 19, causing "invalid hook call" / duplicate React errors.
       dedupe: ['react', 'react-dom'],
     },
+    // @stripe/stripe-js is only reachable through CartDrawer's React.lazy()
+    // import (CartDrawer -> lib/stripe.ts -> @stripe/stripe-js), so Vite's
+    // static crawler never discovers it during the initial dependency scan.
+    // Without this, the first time a session opens the cart, Vite has to
+    // pre-bundle it on demand mid-request; that dynamic import can 404/504
+    // ("Outdated Optimize Dep"), which crashes the lazy-loaded chunk and
+    // surfaces as the top-level Sentry ErrorBoundary fallback. Declaring it
+    // here puts it through the same eager pre-bundling pass as every
+    // statically-imported dependency.
+    optimizeDeps: {
+      include: ['@stripe/stripe-js'],
+    },
     test: {
       environment: 'jsdom',
     },

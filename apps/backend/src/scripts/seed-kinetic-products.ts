@@ -9,6 +9,19 @@ import {
   createProductsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
+/**
+ * Parses the grams out of a display label like "5 LB (2.27 KG)" so the real
+ * value can be written to Medusa's native `variant.weight` (used by
+ * fulfillment-chilexpress/service.ts for shipping quotes), not just kept as
+ * a decorative string in metadata.
+ */
+function parseWeightGrams(label: string): number | undefined {
+  const match = label.match(/\(([\d.]+)\s*(G|KG)\)/i)
+  if (!match) return undefined
+  const value = parseFloat(match[1])
+  return match[2].toUpperCase() === "KG" ? Math.round(value * 1000) : Math.round(value)
+}
+
 type SeedFlavor = { id: string; name: string }
 type SeedSize = {
   id: string
@@ -27,6 +40,15 @@ type SeedProduct = {
   image: string
   flavors?: SeedFlavor[]
   sizes?: SeedSize[]
+  /**
+   * Only set for products with no `sizes` (so no real measured weight
+   * exists anywhere). A category-typical estimate — not measured — used so
+   * Chilexpress quotes aren't a flat 500g for every one of these
+   * regardless of size. Written to variant.weight with
+   * metadata.weight_estimated = true so it's never shown to customers as a
+   * real spec. Replace with the real measured weight when available.
+   */
+  estimatedWeightGrams?: number
 }
 
 /**
@@ -89,6 +111,7 @@ const PRODUCTS: SeedProduct[] = [
     price: 26990,
     image:
       "https://images.unsplash.com/photo-1593095948071-474c5cc2989d?auto=format&fit=crop&w=500&q=75",
+    estimatedWeightGrams: 380,
   },
   {
     handle: "kinetic-preworkout-surge",
@@ -101,6 +124,7 @@ const PRODUCTS: SeedProduct[] = [
       { id: "blue-ice", name: "Blue Raspberry Ice" },
       { id: "sour-apple", name: "Manzana Ácida Eléctrica" },
     ],
+    estimatedWeightGrams: 320,
   },
   {
     handle: "kinetic-shaker-steel",
@@ -109,6 +133,7 @@ const PRODUCTS: SeedProduct[] = [
     price: 18990,
     image:
       "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?auto=format&fit=crop&w=500&q=75",
+    estimatedWeightGrams: 400,
   },
   {
     handle: "kinetic-protein-bars",
@@ -121,6 +146,7 @@ const PRODUCTS: SeedProduct[] = [
       { id: "caramel", name: "Caramelo Salado Crunch" },
       { id: "dark-choco", name: "Chocolate Negro 70%" },
     ],
+    estimatedWeightGrams: 600,
   },
   {
     handle: "kinetic-lifting-straps",
@@ -129,12 +155,14 @@ const PRODUCTS: SeedProduct[] = [
     price: 14990,
     image:
       "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=500&q=75",
+    estimatedWeightGrams: 180,
   },
   {
     handle: "kinetic-performance-tee",
     title: "KINETIC PERFORMANCE TEE",
     description: "Remera técnica transpirable de corte atlético.",
     price: 22990,
+    estimatedWeightGrams: 180,
     image:
       "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?auto=format&fit=crop&w=500&q=75",
   },
@@ -227,11 +255,18 @@ export default async function seedKineticProducts({
           metadata.original_price = size.originalPrice
         }
 
+        const measuredWeightGrams = size.weight ? parseWeightGrams(size.weight) : undefined
+        const weightGrams = measuredWeightGrams ?? p.estimatedWeightGrams
+        if (!measuredWeightGrams && p.estimatedWeightGrams) {
+          metadata.weight_estimated = true
+        }
+
         return {
           title,
           sku: `${p.handle}-${flavor.id}-${size.id}`.toUpperCase(),
           options: optionValues,
           prices: [{ currency_code: "clp", amount: size.price }],
+          ...(weightGrams ? { weight: weightGrams } : {}),
           ...(Object.keys(metadata).length ? { metadata } : {}),
         }
       })
