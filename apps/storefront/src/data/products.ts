@@ -256,3 +256,5 @@ export const FAQS: FAQItem[] = [
     category: 'Pagos'
   }
 ];
+
+export const PRODUCTS: Product[] = [FLAGSHIP_PROTEIN, ...FEATURED_PRODUCTS];

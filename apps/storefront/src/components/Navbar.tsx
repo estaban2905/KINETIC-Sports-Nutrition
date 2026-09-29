@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, Menu, X, Zap, ChevronRight } from 'lucide-react';
+import { ShoppingBag, Menu, X, Zap, ChevronRight, User as UserIcon, Package, Repeat } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { LandingSettings, LandingNavLink, getLandingNavLinks } from '../lib/landing';
+import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
   cartCount: number;
@@ -22,6 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings 
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [navLinksData, setNavLinksData] = useState<LandingNavLink[] | null>(null);
+  const { user, isAuthenticated, openAuthModal } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -112,6 +115,36 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings 
               Comprar Ahora
             </a>
 
+            {/* User Account / Login Button */}
+            {isAuthenticated && user ? (
+              <Link
+                to="/cuenta"
+                className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-neutral-900 border border-neutral-700 hover:border-lime-400 text-neutral-200 hover:text-white transition-all group"
+                title="Mi Cuenta & Pedidos"
+              >
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-6 h-6 rounded-full object-cover border border-lime-400/50"
+                />
+                <span className="hidden lg:inline text-xs font-semibold max-w-[100px] truncate">
+                  {user.name.split(' ')[0]}
+                </span>
+                {user.membership?.status === 'active' && (
+                  <span className="hidden sm:inline-block w-2 h-2 rounded-full bg-lime-400" />
+                )}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={openAuthModal}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 border border-neutral-700 hover:border-lime-400 text-xs font-semibold text-neutral-200 hover:text-white transition-all"
+              >
+                <UserIcon className="w-4 h-4 text-lime-400" />
+                <span className="hidden sm:inline">Mi Cuenta</span>
+              </button>
+            )}
+
             {/* Shopping Cart Button */}
             <button
               id="cart-toggle-btn"
@@ -166,6 +199,41 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings 
                   <ChevronRight className="w-4 h-4 text-neutral-500" />
                 </a>
               ))}
+
+              {/* Account Link in Mobile */}
+              {isAuthenticated && user ? (
+                <Link
+                  to="/cuenta"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center justify-between text-base font-bold text-lime-400 py-2 border-b border-neutral-800/60"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-6 h-6 rounded-full object-cover border border-lime-400"
+                    />
+                    <span>Mi Cuenta ({user.name.split(' ')[0]})</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    openAuthModal();
+                  }}
+                  className="flex items-center justify-between w-full text-base font-bold text-lime-400 py-2 border-b border-neutral-800/60 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <UserIcon className="w-4 h-4" />
+                    <span>Iniciar Sesión con Google</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+
               <div className="pt-2">
                 <button
                   onClick={() => {
