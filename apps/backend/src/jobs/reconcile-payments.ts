@@ -26,12 +26,18 @@ export function isMercadoPagoApproved(
   return payment?.status === "approved"
 }
 
+export function isKhipuDone(
+  payment: { status?: string } | null | undefined
+): boolean {
+  return payment?.status === "done"
+}
+
 /**
  * Catches carts whose payment actually succeeded at the provider but never
  * turned into an order — because the customer's browser never came back to
  * /checkout/confirmar (Webpay has no webhook, see payment-webpay/service.ts)
- * or because our webhook-driven completion (Mercado Pago) never fired or
- * failed. It re-verifies the TRUE status against the provider directly and,
+ * or because our webhook-driven completion (Mercado Pago, Khipu) never fired
+ * or failed. It re-verifies the TRUE status against the provider directly and,
  * only if genuinely paid, re-runs the same completeCartWorkflow the
  * storefront would have triggered — reusing Medusa's own order creation,
  * inventory reservation and idempotent payment authorization instead of
@@ -49,7 +55,7 @@ export default async function reconcilePayments(container: MedusaContainer) {
     entity: "payment_session",
     fields: ["id", "provider_id", "status", "data", "created_at", "payment_collection_id"],
     filters: {
-      provider_id: ["pp_webpay_webpay", "pp_mercadopago_mercadopago"],
+      provider_id: ["pp_webpay_webpay", "pp_mercadopago_mercadopago", "pp_khipu_khipu"],
       status: ["pending", "error"],
       created_at: { $gte: lookbackAfter, $lte: staleBefore },
     } as any,
@@ -80,6 +86,7 @@ export default async function reconcilePayments(container: MedusaContainer) {
   const mercadopagoClient = process.env.MERCADOPAGO_ACCESS_TOKEN
     ? new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN })
     : null
+  const khipuApiKey = process.env.KHIPU_API_KEY || null
 
   for (const session of sessions) {
     try {
@@ -125,6 +132,15 @@ export default async function reconcilePayments(container: MedusaContainer) {
         options: { external_reference: sessionId, sort: "date_created", criteria: "desc" },
       })
       trulyPaid = isMercadoPagoApproved(results?.[0])
+    } else if (session.provider_id === "pp_khipu_khipu") {
+      if (!khipuApiKey) return
+      const paymentId = data?.payment_id as string | undefined
+      if (!paymentId) return
+      const response = await fetch(`https://payment-api.khipu.com/v3/payments/${paymentId}`, {
+        headers: { "x-api-key": khipuApiKey },
+      })
+      if (!response.ok) return
+      trulyPaid = isKhipuDone(await response.json())
     } else {
       return
     }

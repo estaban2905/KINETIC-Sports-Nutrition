@@ -28,7 +28,7 @@ export const currency = (n: number) => `$${Math.round(n).toLocaleString('es-CL')
 // customer: even if a region was seeded with it, this allowlist keeps it
 // out of the checkout UI in production. See seed-chile.ts for the matching
 // server-side guard (it's only ever seeded when NODE_ENV !== "production").
-export const ALLOWED_PAYMENT_PROVIDER_IDS = ['webpay', 'mercadopago', 'stripe'];
+export const ALLOWED_PAYMENT_PROVIDER_IDS = ['webpay', 'mercadopago', 'stripe', 'khipu'];
 
 export function isAllowedPaymentProvider(
   providerId: string,
@@ -764,6 +764,7 @@ function SubmitButton({
 export function formatProviderName(providerId: string): string {
   if (providerId.includes('webpay')) return 'Webpay Plus';
   if (providerId.includes('mercadopago')) return 'Mercado Pago';
+  if (providerId.includes('khipu')) return 'Khipu';
   if (providerId.includes('stripe')) return 'Tarjeta de Crédito/Débito (Stripe)';
   if (providerId.includes('system_default')) return 'Pago de prueba (modo desarrollo)';
   return providerId;

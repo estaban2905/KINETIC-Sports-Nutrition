@@ -1,4 +1,4 @@
-import { isMercadoPagoApproved, isWebpayAuthorized } from "../reconcile-payments"
+import { isKhipuDone, isMercadoPagoApproved, isWebpayAuthorized } from "../reconcile-payments"
 
 describe("isWebpayAuthorized", () => {
   it("is true only for an AUTHORIZED status with response_code 0", () => {
@@ -33,5 +33,21 @@ describe("isMercadoPagoApproved", () => {
   it("is false for null/undefined", () => {
     expect(isMercadoPagoApproved(null)).toBe(false)
     expect(isMercadoPagoApproved(undefined)).toBe(false)
+  })
+})
+
+describe("isKhipuDone", () => {
+  it("is true only for status done", () => {
+    expect(isKhipuDone({ status: "done" })).toBe(true)
+  })
+
+  it("is false for pending/verifying", () => {
+    expect(isKhipuDone({ status: "pending" })).toBe(false)
+    expect(isKhipuDone({ status: "verifying" })).toBe(false)
+  })
+
+  it("is false for null/undefined", () => {
+    expect(isKhipuDone(null)).toBe(false)
+    expect(isKhipuDone(undefined)).toBe(false)
   })
 })

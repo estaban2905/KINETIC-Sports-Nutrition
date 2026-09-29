@@ -28,13 +28,13 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-// Stripe, MercadoPago and Resend require the merchant's own credentials,
-// which may not exist yet in every environment. Their providers throw in
-// validateOptions when required fields are missing, which would otherwise
-// crash the ENTIRE backend on boot — so they're only registered once
-// configured. Webpay always has Transbank's public integration credentials
-// as a fallback (see .env.example) and Chilexpress degrades to a flat
-// rate on its own, so both are always safe to register.
+// Stripe, MercadoPago, Khipu and Resend require the merchant's own
+// credentials, which may not exist yet in every environment. Their providers
+// throw in validateOptions when required fields are missing, which would
+// otherwise crash the ENTIRE backend on boot — so they're only registered
+// once configured. Webpay always has Transbank's public integration
+// credentials as a fallback (see .env.example) and Chilexpress degrades to a
+// flat rate on its own, so both are always safe to register.
 const paymentProviders: Record<string, unknown>[] = [
   {
     resolve: "./src/modules/payment-webpay",
@@ -68,6 +68,20 @@ if (process.env.MERCADOPAGO_ACCESS_TOKEN) {
       successUrl: process.env.MERCADOPAGO_SUCCESS_URL,
       failureUrl: process.env.MERCADOPAGO_FAILURE_URL,
       notificationUrl: process.env.MERCADOPAGO_NOTIFICATION_URL,
+    },
+  })
+}
+
+if (process.env.KHIPU_API_KEY) {
+  paymentProviders.push({
+    resolve: "./src/modules/payment-khipu",
+    id: "khipu",
+    options: {
+      apiKey: process.env.KHIPU_API_KEY,
+      webhookSecret: process.env.KHIPU_WEBHOOK_SECRET,
+      returnUrl: process.env.KHIPU_RETURN_URL,
+      cancelUrl: process.env.KHIPU_CANCEL_URL,
+      notifyUrl: process.env.KHIPU_NOTIFY_URL,
     },
   })
 }

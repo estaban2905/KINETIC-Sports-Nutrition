@@ -7,7 +7,7 @@ import {
 } from '../CartDrawer';
 
 describe('isAllowedPaymentProvider', () => {
-  it.each(['pp_webpay_webpay', 'pp_mercadopago_mercadopago', 'pp_stripe_stripe'])(
+  it.each(['pp_webpay_webpay', 'pp_mercadopago_mercadopago', 'pp_stripe_stripe', 'pp_khipu_khipu'])(
     'allows the real payment provider %s',
     (providerId) => {
       expect(isAllowedPaymentProvider(providerId, false)).toBe(true);
@@ -38,6 +38,7 @@ describe('formatProviderName', () => {
     expect(formatProviderName('pp_webpay_webpay')).toBe('Webpay Plus');
     expect(formatProviderName('pp_mercadopago_mercadopago')).toBe('Mercado Pago');
     expect(formatProviderName('pp_stripe_stripe')).toBe('Tarjeta de Crédito/Débito (Stripe)');
+    expect(formatProviderName('pp_khipu_khipu')).toBe('Khipu');
     expect(formatProviderName('pp_system_default')).toBe('Pago de prueba (modo desarrollo)');
   });
 
