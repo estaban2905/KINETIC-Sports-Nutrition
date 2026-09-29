@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ShoppingBag, Star, ShieldCheck, Truck, RefreshCw, Check, Zap, Flame, Info } from 'lucide-react';
+import { ShoppingBag, Star, ShieldCheck, Truck, RefreshCw, Check, Zap, Flame, Info, Repeat, Gift } from 'lucide-react';
 import { Product, ProductFlavor, ProductSize } from '../types';
 import { ProteinVisual } from './ProteinVisual';
 import confetti from 'canvas-confetti';
+import { useAuth } from '../context/AuthContext';
 import {
   getLandingProductSection,
   getLandingGuarantees,
@@ -83,9 +85,13 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
   const [quantity, setQuantity] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'info' | 'nutrition' | 'usage'>('info');
   const [addedSuccess, setAddedSuccess] = useState<boolean>(false);
+  const [purchaseMode, setPurchaseMode] = useState<'one-time' | 'subscription'>('one-time');
   const [section, setSection] = useState<LandingProductSection | null>(null);
   const [guarantees, setGuarantees] = useState<LandingGuarantee[] | null>(null);
   const [usageTips, setUsageTips] = useState<LandingUsageTip[] | null>(null);
+
+  const navigate = useNavigate();
+  const { isAuthenticated, openAuthModal, subscribeMembership } = useAuth();
 
   useEffect(() => {
     getLandingProductSection().then(setSection);
@@ -316,6 +322,79 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
               </div>
             </div>
 
+            {/* Purchase Mode Selector: Compra Única vs Suscripción Mensual 15% OFF */}
+            <div className="mt-8 space-y-3">
+              <label className="block text-xs font-mono uppercase tracking-wider text-neutral-300">
+                3. Modalidad de Compra:
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* One time option */}
+                <button
+                  type="button"
+                  onClick={() => setPurchaseMode('one-time')}
+                  className={`p-3.5 rounded-2xl border text-left transition-all ${
+                    purchaseMode === 'one-time'
+                      ? 'border-neutral-500 bg-neutral-900 shadow-md ring-1 ring-neutral-400'
+                      : 'border-neutral-800 bg-neutral-950/60 hover:border-neutral-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-white">Compra Única</span>
+                    <span className="text-sm font-mono font-bold text-neutral-200">
+                      ${currentSize.price.toLocaleString('es-CL')}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-neutral-400 mt-1 block">
+                    Un solo envío sin recurrencia.
+                  </span>
+                </button>
+
+                {/* Subscription option */}
+                <button
+                  type="button"
+                  onClick={() => setPurchaseMode('subscription')}
+                  className={`p-3.5 rounded-2xl border text-left transition-all relative overflow-hidden ${
+                    purchaseMode === 'subscription'
+                      ? 'border-lime-400 bg-lime-400/10 shadow-lg ring-1 ring-lime-400'
+                      : 'border-neutral-800 bg-neutral-950/60 hover:border-lime-400/50'
+                  }`}
+                >
+                  <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-black uppercase font-mono bg-lime-400 text-neutral-950">
+                    Ahorra 15%
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <Repeat className="w-3.5 h-3.5 text-lime-400" />
+                    <span className="text-sm font-bold text-lime-400">Membresía Mensual</span>
+                  </div>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-base font-black font-display text-white">
+                      ${Math.round(currentSize.price * 0.85).toLocaleString('es-CL')}
+                    </span>
+                    <span className="text-[10px] text-neutral-400 font-mono">/ mes</span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Subscription perks banner when selected */}
+              {purchaseMode === 'subscription' && (
+                <div className="p-3.5 rounded-xl bg-neutral-900/90 border border-lime-400/40 space-y-1.5 text-xs text-neutral-300">
+                  <div className="flex items-center gap-2 text-lime-400 font-bold">
+                    <Gift className="w-4 h-4 flex-shrink-0" />
+                    <span>¡Shaker KINETIC de acero incluido de regalo en tu 1er mes!</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-neutral-300">
+                    <Check className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
+                    <span>Despacho automático cada 30 días con Chilexpress Prioritario (Gratis)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-neutral-300">
+                    <Check className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
+                    <span>Sin contratos: cambia de sabor, pausa o cancela en 1 clic en tu cuenta</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Quantity Selector & Add to Cart CTA */}
             <div className="mt-8 flex flex-col sm:flex-row items-stretch gap-4">
               {/* Quantity counter */}
@@ -339,16 +418,34 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
                 </button>
               </div>
 
-              {/* Add to Cart Button */}
-              <button
-                id="product-add-to-cart-btn"
-                type="button"
-                onClick={handleAdd}
-                className="flex-1 py-4 px-6 rounded-xl bg-lime-400 hover:bg-lime-300 text-neutral-950 font-black font-display text-lg uppercase tracking-wider shadow-[0_0_25px_rgba(163,230,53,0.3)] hover:shadow-[0_0_35px_rgba(163,230,53,0.45)] transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
-              >
-                <ShoppingBag className="w-5 h-5 text-neutral-950 fill-neutral-950/20" />
-                <span>{addedSuccess ? '¡AGREGADO AL CARRITO!' : 'AGREGAR AL CARRITO'}</span>
-              </button>
+              {/* Add to Cart or Subscribe Button */}
+              {purchaseMode === 'subscription' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      openAuthModal();
+                      return;
+                    }
+                    subscribeMembership(selectedFlavor.id, selectedFlavor.name);
+                    navigate('/cuenta?tab=membership');
+                  }}
+                  className="flex-1 py-4 px-6 rounded-xl bg-lime-400 hover:bg-lime-300 text-neutral-950 font-black font-display text-lg uppercase tracking-wider shadow-[0_0_25px_rgba(163,230,53,0.3)] hover:shadow-[0_0_35px_rgba(163,230,53,0.45)] transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  <Repeat className="w-5 h-5 text-neutral-950" />
+                  <span>SUSCRIBIRME Y AHORRAR 15%</span>
+                </button>
+              ) : (
+                <button
+                  id="product-add-to-cart-btn"
+                  type="button"
+                  onClick={handleAdd}
+                  className="flex-1 py-4 px-6 rounded-xl bg-lime-400 hover:bg-lime-300 text-neutral-950 font-black font-display text-lg uppercase tracking-wider shadow-[0_0_25px_rgba(163,230,53,0.3)] hover:shadow-[0_0_35px_rgba(163,230,53,0.45)] transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
+                >
+                  <ShoppingBag className="w-5 h-5 text-neutral-950 fill-neutral-950/20" />
+                  <span>{addedSuccess ? '¡AGREGADO AL CARRITO!' : 'AGREGAR AL CARRITO'}</span>
+                </button>
+              )}
             </div>
 
             {/* Security and Trust Guarantees */}
