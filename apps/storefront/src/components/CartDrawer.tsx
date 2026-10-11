@@ -23,6 +23,32 @@ type CheckoutStep = 'cart' | 'address' | 'shipping' | 'payment';
 
 export const currency = (n: number) => `$${Math.round(n).toLocaleString('es-CL')}`;
 
+/**
+ * Line price shown in the cart step. Medusa's `item.total` can come back as 0
+ * (or missing) on some cart responses even though `item_subtotal` is right,
+ * which rendered "$0" next to a real subtotal. Fall back to
+ * unit_price × quantity whenever the computed total isn't usable.
+ */
+export function getLineTotal(item: {
+  total?: number | null;
+  unit_price?: number | null;
+  quantity: number;
+}): number {
+  if (typeof item.total === 'number' && item.total > 0) return item.total;
+  return (item.unit_price ?? 0) * item.quantity;
+}
+
+/**
+ * Total for the cart step. `cart.total` already includes any shipping method
+ * left over from an earlier checkout attempt, while this step says shipping
+ * is calculated later — so the two disagreed (subtotal $131.980 vs total
+ * $137.855). Here the total is just items minus discounts; shipping is added
+ * in the shipping/payment steps.
+ */
+export function getCartStepTotal(itemSubtotal: number, discountTotal: number): number {
+  return Math.max(0, itemSubtotal - discountTotal);
+}
+
 // Second line of defense against pp_system_default (Medusa's manual/no-op
 // provider, which authorizes without charging) ever reaching a real
 // customer: even if a region was seeded with it, this allowlist keeps it
@@ -402,7 +428,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
                           <div className="mt-1 flex items-center justify-between">
                             <span className="font-bold text-sm text-white font-display">
-                              {currency(item.total ?? 0)}
+                              {currency(getLineTotal(item))}
                             </span>
 
                             <div className="flex items-center border border-neutral-700 rounded-lg bg-neutral-950">
@@ -648,7 +674,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     <div className="flex justify-between text-base font-bold text-white pt-2 border-t border-neutral-800 font-display">
                       <span className="uppercase">TOTAL</span>
                       <span className="text-lime-400 text-xl font-black">
-                        {currency(cart?.total ?? itemSubtotal)}
+                        {currency(getCartStepTotal(itemSubtotal, discountTotal))}
                       </span>
                     </div>
                   </div>

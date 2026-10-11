@@ -6,13 +6,19 @@ describe("getDesiredPaymentProviders", () => {
     "pp_webpay_webpay",
     "pp_mercadopago_mercadopago",
     "pp_stripe_stripe",
+    "pp_khipu_khipu",
   ])
 
   it("excludes pp_system_default in production", () => {
     const providers = getDesiredPaymentProviders("production", registeredIds)
 
     expect(providers).not.toContain("pp_system_default")
-    expect(providers).toEqual(["pp_webpay_webpay", "pp_mercadopago_mercadopago", "pp_stripe_stripe"])
+    expect(providers).toEqual([
+      "pp_webpay_webpay",
+      "pp_mercadopago_mercadopago",
+      "pp_stripe_stripe",
+      "pp_khipu_khipu",
+    ])
   })
 
   it.each([undefined, "development", "test"])(

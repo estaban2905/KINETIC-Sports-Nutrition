@@ -112,7 +112,18 @@ class KhipuPaymentProviderService extends AbstractPaymentProvider<KhipuOptions> 
         transaction_id: sessionId,
         return_url: this.options_.returnUrl,
         cancel_url: this.options_.cancelUrl,
-        notify_url: this.options_.notifyUrl,
+        // Khipu's API validates notify_url and REJECTS the entire payment
+        // creation with a 400 if it isn't a publicly reachable URL (e.g.
+        // http://localhost:...) — so in local dev, where there's no public
+        // URL, this must be omitted entirely rather than sent empty/invalid.
+        // notify_api_version forces the new signed-JSON-body webhook format;
+        // without it Khipu falls back to the collector account's configured
+        // default, which for accounts created before v3 (like this one) is
+        // "1.3", the OLD notification_token-based webhook that
+        // getWebhookActionAndData below can't parse.
+        ...(this.options_.notifyUrl
+          ? { notify_url: this.options_.notifyUrl, notify_api_version: "3.0" }
+          : {}),
       }),
     })
 

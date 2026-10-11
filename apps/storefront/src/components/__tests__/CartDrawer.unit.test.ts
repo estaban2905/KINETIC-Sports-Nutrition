@@ -3,8 +3,32 @@ import {
   ALLOWED_PAYMENT_PROVIDER_IDS,
   currency,
   formatProviderName,
+  getCartStepTotal,
+  getLineTotal,
   isAllowedPaymentProvider,
 } from '../CartDrawer';
+
+describe('getLineTotal', () => {
+  it('uses item.total when it is a positive number', () => {
+    expect(getLineTotal({ total: 131980, unit_price: 65990, quantity: 2 })).toBe(131980);
+  });
+
+  it('falls back to unit_price × quantity when total is 0 or missing', () => {
+    expect(getLineTotal({ total: 0, unit_price: 65990, quantity: 2 })).toBe(131980);
+    expect(getLineTotal({ unit_price: 65990, quantity: 2 })).toBe(131980);
+  });
+});
+
+describe('getCartStepTotal', () => {
+  it('ignores shipping: total is subtotal minus discount', () => {
+    expect(getCartStepTotal(131980, 0)).toBe(131980);
+    expect(getCartStepTotal(131980, 10000)).toBe(121980);
+  });
+
+  it('never goes negative', () => {
+    expect(getCartStepTotal(5000, 9000)).toBe(0);
+  });
+});
 
 describe('isAllowedPaymentProvider', () => {
   it.each(['pp_webpay_webpay', 'pp_mercadopago_mercadopago', 'pp_stripe_stripe', 'pp_khipu_khipu'])(

@@ -10,6 +10,53 @@ function jsonResponse(body: unknown, ok = true, status = 200) {
   } as Response
 }
 
+describe("KhipuPaymentProviderService.initiatePayment", () => {
+  it("always requests notify_api_version 3.0, regardless of the collector account's default", async () => {
+    const fetchMock = jest.fn().mockResolvedValue(
+      jsonResponse({ payment_id: "pay1", payment_url: "https://khipu.test/pay1" })
+    )
+    global.fetch = fetchMock as unknown as typeof fetch
+    const service = new KhipuPaymentProviderService(
+      { logger: { error: jest.fn(), info: jest.fn() } } as any,
+      {
+        apiKey: "test-api-key",
+        returnUrl: "https://kinetic.test/checkout/confirmar",
+        cancelUrl: "https://kinetic.test/checkout/confirmar",
+        notifyUrl: "https://kinetic.test/hooks/payment/khipu_khipu",
+      } as any
+    )
+
+    await service.initiatePayment({ amount: 10000, data: {} } as any)
+
+    const [, requestInit] = fetchMock.mock.calls[0]
+    const body = JSON.parse(requestInit.body as string)
+    expect(body.notify_api_version).toBe("3.0")
+    expect(body.notify_url).toBe("https://kinetic.test/hooks/payment/khipu_khipu")
+  })
+
+  it("omits notify_url/notify_api_version entirely when no notifyUrl is configured (Khipu rejects localhost/invalid URLs with a 400)", async () => {
+    const fetchMock = jest.fn().mockResolvedValue(
+      jsonResponse({ payment_id: "pay1", payment_url: "https://khipu.test/pay1" })
+    )
+    global.fetch = fetchMock as unknown as typeof fetch
+    const service = new KhipuPaymentProviderService(
+      { logger: { error: jest.fn(), info: jest.fn() } } as any,
+      {
+        apiKey: "test-api-key",
+        returnUrl: "https://kinetic.test/checkout/confirmar",
+        cancelUrl: "https://kinetic.test/checkout/confirmar",
+      } as any
+    )
+
+    await service.initiatePayment({ amount: 10000, data: {} } as any)
+
+    const [, requestInit] = fetchMock.mock.calls[0]
+    const body = JSON.parse(requestInit.body as string)
+    expect(body.notify_url).toBeUndefined()
+    expect(body.notify_api_version).toBeUndefined()
+  })
+})
+
 describe("KhipuPaymentProviderService.authorizePayment", () => {
   let fetchMock: jest.Mock
   let service: any

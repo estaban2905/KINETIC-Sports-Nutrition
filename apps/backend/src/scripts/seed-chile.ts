@@ -10,6 +10,7 @@ import {
   createStockLocationsWorkflow,
   createTaxRegionsWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
+  updateRegionsWorkflow,
   updateStoresWorkflow,
 } from "@medusajs/medusa/core-flows"
 
@@ -30,6 +31,7 @@ export function getDesiredPaymentProviders(
     "pp_webpay_webpay",
     "pp_mercadopago_mercadopago",
     "pp_stripe_stripe",
+    "pp_khipu_khipu",
   ]
   return desired.filter((id) => registeredIds.has(id))
 }
@@ -55,8 +57,29 @@ export default async function seedChile({
     entity: "region",
     fields: ["id", "name"],
   })
-  if (existingRegions.some((r) => r.name === "Chile")) {
-    logger.info("Chile region already seeded, skipping.")
+  const existingChile = existingRegions.find((r) => r.name === "Chile")
+  if (existingChile) {
+    // The region itself (currency, shipping, tax) only needs creating once,
+    // but which payment providers are enabled on it can change any time a
+    // merchant adds credentials for one (e.g. KHIPU_API_KEY) after the first
+    // seed — without this, a newly-configured provider would register in
+    // medusa-config.ts but never reach an already-seeded region's checkout.
+    const { data: registeredPaymentProviders } = await query.graph({
+      entity: "payment_provider",
+      fields: ["id"],
+    })
+    const registeredIds = new Set(registeredPaymentProviders.map((p) => p.id))
+    const paymentProviders = getDesiredPaymentProviders(process.env.NODE_ENV, registeredIds)
+
+    await updateRegionsWorkflow(container).run({
+      input: {
+        selector: { id: existingChile.id },
+        update: { payment_providers: paymentProviders },
+      },
+    })
+    logger.info(
+      `Chile region already seeded — synced payment providers: ${paymentProviders.join(", ")}`
+    )
     return
   }
 

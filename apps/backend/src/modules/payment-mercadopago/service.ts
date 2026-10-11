@@ -69,6 +69,13 @@ class MercadoPagoPaymentProviderService extends AbstractPaymentProvider<MercadoP
     const sessionId = (input.data?.session_id as string) ?? `sess_${Date.now()}`
     const amount = Number(input.amount)
 
+    // auto_return requires back_urls.success to be https — Mercado Pago
+    // rejects http (e.g. local dev on localhost) with the misleading error
+    // "auto_return invalid. back_url.success must be defined". Omitting
+    // auto_return in that case still lets the customer return manually via
+    // the button MP shows after payment.
+    const isHttps = this.options_.successUrl?.startsWith("https://")
+
     const preference = await new Preference(this.client_).create({
       body: {
         items: [
@@ -86,7 +93,7 @@ class MercadoPagoPaymentProviderService extends AbstractPaymentProvider<MercadoP
           failure: this.options_.failureUrl,
           pending: this.options_.successUrl,
         },
-        auto_return: "approved",
+        ...(isHttps ? { auto_return: "approved" as const } : {}),
         notification_url: this.options_.notificationUrl,
       },
     })
@@ -97,7 +104,15 @@ class MercadoPagoPaymentProviderService extends AbstractPaymentProvider<MercadoP
         preference_id: preference.id,
         session_id: sessionId,
         // The storefront redirects the browser here to start Checkout Pro.
-        url: preference.init_point,
+        // Outside production, prefer sandbox_init_point — the URL MP's own
+        // docs designate for test credentials. Note: this alone did not
+        // resolve a "service_error" we hit while diagnosing a pending
+        // seller-account verification; init_point and sandbox_init_point
+        // both failed identically until that verification cleared.
+        url:
+          process.env.NODE_ENV === "production"
+            ? preference.init_point
+            : preference.sandbox_init_point ?? preference.init_point,
         // Kept so authorizePayment can verify MP's payment actually matches
         // what this session was created for, not just that some payment
         // with the right external_reference exists.
