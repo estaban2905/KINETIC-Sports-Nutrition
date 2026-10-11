@@ -34,7 +34,7 @@
     "@medusajs/framework": "2.21.0",
     "@medusajs/icons": "2.21.0",
     "@medusajs/medusa": "2.21.0",
-    "@medusajs/payment-stripe": "^2.21.0",
+    "@medusajs/payment-stripe": "2.21.0",
     "@medusajs/product": "2.21.0",
     "@medusajs/types": "2.21.0",
     "@medusajs/ui": "4.2.4",
