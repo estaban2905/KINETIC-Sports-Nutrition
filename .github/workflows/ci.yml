@@ -68,20 +68,7 @@ jobs:
           push: false
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,scope=${{ matrix.app }},mode=max
-
-  # ---------------------------------------------------------------------------
-  # CD — on push, and only after every CI job above is green.
-  #   push to `develop` -> Railway environment `develop`
-  #   push to `main`    -> Railway environment `production`
-  # Each GitHub Environment (Settings > Environments) of the same name holds
-  # its own RAILWAY_TOKEN secret — a Railway project token scoped to that one
-  # environment — so a develop deploy can never touch production. Add required
-  # reviewers on the `production` GitHub Environment to gate that deploy.
-  # Service names must match the Railway service names exactly.
-  # Backend goes first: its predeploy runs `medusa db:migrate`, and the
-  # storefront (which bakes the backend URL/publishable key at build time)
-  # should only roll out against an already-migrated backend.
-  # ---------------------------------------------------------------------------
+          
   deploy-backend:
     name: Deploy backend
     needs: [backend, storefront, docker]

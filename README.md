@@ -1,4 +1,4 @@
-# KINETIC Sports Nutrition — Monorepo (Medusa 2.x + Storefront)
+# KINETIC Sports Nutrition — Monorepo (Medusa 2.x.x + Storefront)
 
 ![KINETIC Sports Nutrition — Landing](docs/screenshots/landing-hero.png)
 
