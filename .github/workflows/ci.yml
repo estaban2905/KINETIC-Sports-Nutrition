@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+# A newer push to main cancels an in-flight PR run, but never an in-flight
+# deploy — cancelling `railway up` halfway could leave a half-rolled release.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   backend:
     name: Backend
@@ -62,3 +68,44 @@ jobs:
           push: false
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,scope=${{ matrix.app }},mode=max
+
+  # ---------------------------------------------------------------------------
+  # CD — only on push to main, and only after every CI job above is green.
+  # Needs these GitHub secrets (Settings > Secrets and variables > Actions):
+  #   RAILWAY_TOKEN  Project token (Railway > Project > Settings > Tokens),
+  #                  scoped to the `production` environment.
+  # Service names below must match the Railway service names exactly.
+  # Backend goes first: its predeploy runs `medusa db:migrate`, and the
+  # storefront (which bakes the backend URL/publishable key at build time)
+  # should only roll out against an already-migrated backend.
+  # ---------------------------------------------------------------------------
+  deploy-backend:
+    name: Deploy backend
+    needs: [backend, storefront, docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Deploy to Railway
+        run: npx --yes @railway/cli@latest up --ci --service backend --environment production
+
+  deploy-storefront:
+    name: Deploy storefront
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Deploy to Railway
+        run: npx --yes @railway/cli@latest up --ci --service storefront --environment production
