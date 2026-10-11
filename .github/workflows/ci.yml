@@ -77,14 +77,14 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      RAILWAY_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
+      DEPLOY_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Deploy to Railway
-        run: npx --yes @railway/cli@5.64.2 up --ci --service backend --environment "$RAILWAY_ENV"
+        run: npx --yes @railway/cli@5.64.2 up --ci --service backend --environment "$DEPLOY_ENV"
 
   deploy-storefront:
     name: Deploy storefront
@@ -93,11 +93,11 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      RAILWAY_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
+      DEPLOY_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Deploy to Railway
-        run: npx --yes @railway/cli@5.64.2 up --ci --service storefront --environment "$RAILWAY_ENV"
+        run: npx --yes @railway/cli@5.64.2 up --ci --service storefront --environment "$DEPLOY_ENV"
