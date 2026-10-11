@@ -202,14 +202,20 @@ export default async function seedKineticProducts({
     stockLocations.find((l) => l.name === "Bodega Santiago") ??
     stockLocations[0]
 
-  const { result: categoryResult } = await createProductCategoriesWorkflow(
-    container
-  ).run({
-    input: {
-      product_categories: [{ name: "Suplementos KINETIC", is_active: true }],
-    },
+  const { data: existingCategories } = await query.graph({
+    entity: "product_category",
+    fields: ["id"],
+    filters: { handle: "suplementos-kinetic" },
   })
-  const category = categoryResult[0]
+  const category =
+    existingCategories[0] ??
+    (
+      await createProductCategoriesWorkflow(container).run({
+        input: {
+          product_categories: [{ name: "Suplementos KINETIC", is_active: true }],
+        },
+      })
+    ).result[0]
 
   for (const p of PRODUCTS) {
     if (existingHandles.has(p.handle)) {
@@ -298,12 +304,18 @@ export default async function seedKineticProducts({
   logger.info("Seeding inventory levels for KINETIC products...")
   const { data: inventoryItems } = await query.graph({
     entity: "inventory_item",
-    fields: ["id"],
+    fields: ["id", "location_levels.location_id"],
   })
+  const itemsWithoutLevel = inventoryItems.filter(
+    (item) =>
+      !item.location_levels?.some(
+        (l) => l?.location_id === chileStockLocation.id
+      )
+  )
 
   await createInventoryLevelsWorkflow(container).run({
     input: {
-      inventory_levels: inventoryItems.map((item) => ({
+      inventory_levels: itemsWithoutLevel.map((item) => ({
         location_id: chileStockLocation.id,
         stocked_quantity: 1000,
         inventory_item_id: item.id,

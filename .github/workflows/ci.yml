@@ -42,3 +42,23 @@ jobs:
         run: npm run test -w apps/storefront
       - name: Build
         run: npm run build -w apps/storefront
+
+  docker:
+    name: Docker build (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [backend, storefront]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # Same Dockerfiles Railway builds — catches a broken lockfile or build
+      # step before the deploy does. Build context is the monorepo root.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: false
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,scope=${{ matrix.app }},mode=max
