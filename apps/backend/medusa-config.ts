@@ -161,6 +161,25 @@ module.exports = defineConfig({
               // the customer's comuna to a countyCode before rating.
               coberturaApiKey: process.env.CHILEXPRESS_COBERTURA_API_KEY,
               coberturaBaseUrl: process.env.CHILEXPRESS_COBERTURA_BASE_URL,
+              // Envíos API: creates the transport order (tracking number +
+              // label) when "Create fulfillment" is pressed in the admin.
+              envios: process.env.CHILEXPRESS_ENVIOS_API_KEY
+                ? {
+                    apiKey: process.env.CHILEXPRESS_ENVIOS_API_KEY,
+                    baseUrl: process.env.CHILEXPRESS_ENVIOS_BASE_URL,
+                    customerCardNumber: process.env.CHILEXPRESS_TCC,
+                    rut: process.env.CHILEXPRESS_RUT,
+                  }
+                : undefined,
+              sender: {
+                name: process.env.CHILEXPRESS_SENDER_NAME,
+                phone: process.env.CHILEXPRESS_SENDER_PHONE,
+                email: process.env.CHILEXPRESS_SENDER_EMAIL,
+                address: process.env.CHILEXPRESS_ORIGIN_STREET
+                  ? `${process.env.CHILEXPRESS_ORIGIN_STREET} ${process.env.CHILEXPRESS_ORIGIN_STREET_NUMBER ?? ""}`.trim()
+                  : undefined,
+                coverageCode: process.env.CHILEXPRESS_ORIGIN_CODE,
+              },
             },
           },
         ],
