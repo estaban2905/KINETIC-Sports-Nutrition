@@ -74,7 +74,7 @@ describe("KhipuPaymentProviderService.authorizePayment", () => {
     )
   })
 
-  it("authorizes when Khipu reports 'done' and the amount matches the session", async () => {
+  it("reports captured when Khipu reports 'done' and the amount matches the session", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse({ payment_id: "pay1", status: "done", amount: 10000, transaction_id: "s1" })
     )
@@ -83,7 +83,7 @@ describe("KhipuPaymentProviderService.authorizePayment", () => {
       data: { payment_id: "pay1", amount: 10000 },
     } as any)
 
-    expect(result.status).toBe("authorized")
+    expect(result.status).toBe("captured")
   })
 
   it("refunds and errors out when the reconciled amount doesn't match the session", async () => {
@@ -166,7 +166,7 @@ describe("KhipuPaymentProviderService.getWebhookActionAndData", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it("re-fetches from Khipu and authorizes once the signature verifies and status is done", async () => {
+  it("re-fetches from Khipu and reports success once the signature verifies and status is done", async () => {
     const rawData = JSON.stringify({ payment_id: "pay1" })
     fetchMock.mockResolvedValue(
       jsonResponse({ payment_id: "pay1", status: "done", amount: 10000, transaction_id: "s1" })
@@ -178,7 +178,7 @@ describe("KhipuPaymentProviderService.getWebhookActionAndData", () => {
       headers: { "x-khipu-signature": signedHeader(rawData) },
     } as any)
 
-    expect(result.action).toBe("authorized")
+    expect(result.action).toBe("captured")
     expect((result.data as any).session_id).toBe("s1")
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/payments/pay1"),
@@ -205,6 +205,6 @@ describe("KhipuPaymentProviderService.getWebhookActionAndData", () => {
       headers: {},
     } as any)
 
-    expect(result.action).toBe("authorized")
+    expect(result.action).toBe("captured")
   })
 })
