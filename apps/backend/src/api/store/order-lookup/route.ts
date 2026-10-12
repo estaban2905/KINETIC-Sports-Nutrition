@@ -1,6 +1,10 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { deriveFulfillmentStatus, derivePaymentStatus } from "../../../lib/order-status"
+import {
+  deriveCustomerStatus,
+  deriveFulfillmentStatus,
+  derivePaymentStatus,
+} from "../../../lib/order-status"
 
 /**
  * Guest order tracking: no customer-account system exists yet, so the
@@ -59,13 +63,25 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return
   }
 
+  const fulfillmentStatus = deriveFulfillmentStatus(order.fulfillments)
+  const paymentStatus = derivePaymentStatus(order.payment_collections)
+  const trackingEvents = (order.fulfillments ?? [])
+    .filter((f: any) => !f.canceled_at)
+    .flatMap((f: any) => (Array.isArray(f.data?.tracking_events) ? f.data.tracking_events : []))
+
   res.json({
     order: {
       id: order.id,
       display_id: order.display_id,
       status: order.status,
-      fulfillment_status: deriveFulfillmentStatus(order.fulfillments),
-      payment_status: derivePaymentStatus(order.payment_collections),
+      customer_status: deriveCustomerStatus({
+        orderStatus: order.status,
+        paymentStatus,
+        fulfillmentStatus,
+        trackingEvents,
+      }),
+      fulfillment_status: fulfillmentStatus,
+      payment_status: paymentStatus,
       created_at: order.created_at,
       total: order.total,
       currency_code: order.currency_code,
@@ -78,6 +94,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         labels: f.labels,
         tracking_events: Array.isArray(f.data?.tracking_events) ? f.data.tracking_events : [],
         tracking_status: typeof f.data?.tracking_status === "string" ? f.data.tracking_status : null,
+        // Chilexpress's delivery certificate PDF; only a plain https link is passed on.
+        tracking_certificate_url:
+          typeof f.data?.tracking_certificate_url === "string" &&
+          f.data.tracking_certificate_url.startsWith("https://")
+            ? f.data.tracking_certificate_url
+            : null,
       })),
     },
   })

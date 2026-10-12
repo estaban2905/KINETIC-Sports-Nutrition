@@ -9,6 +9,12 @@ export type TrackingEvent = {
   at: string | null
   /** Human-readable event ("Pieza en ruta"). */
   description: string
+  /**
+   * Chilexpress's internal `code.eventCode` ("4", "11", "13", "14"). Stable,
+   * unlike the description text, so the customer-facing status is derived
+   * from this (see deriveCustomerStatus). Null when Chilexpress sent none.
+   */
+  code: string | null
 }
 
 export type TrackingResult = {
@@ -16,6 +22,8 @@ export type TrackingResult = {
   /** Chilexpress's own current status text, readable ("En pre-recepcion"). Reported even before any event exists. */
   status: string | null
   deliveredAt: string | null
+  /** PDF "certificado de entrega" Chilexpress attaches to the delivery event (`certificadoEntrega`). */
+  certificateUrl: string | null
   /** Every event Chilexpress registered, newest first. */
   events: TrackingEvent[]
 }
@@ -32,7 +40,8 @@ type TrackingResponse = {
     trackingEvents?: Array<{
       description?: string
       eventDateTime?: string
-      code?: { clientEventDescription?: string }
+      certificadoEntrega?: string | null
+      code?: { eventCode?: string | number; clientEventDescription?: string }
     }>
     transportOrderData?: { status?: string }
   } | null
@@ -59,11 +68,14 @@ export function parseTracking(body: TrackingResponse | null): TrackingResult {
     .map((e) => ({
       at: e.eventDateTime ?? null,
       description: formatEventDescription(e.description || e.code?.clientEventDescription || ""),
+      code: e.code?.eventCode != null && e.code.eventCode !== "" ? String(e.code.eventCode) : null,
     }))
     .filter((e) => e.description)
     .sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""))
 
   return {
+    certificateUrl:
+      data?.trackingEvents?.find((e) => e.certificadoEntrega)?.certificadoEntrega ?? null,
     delivered: Boolean(deliveryEvent || data?.deliveryData?.deliveryDateTime),
     status: data?.transportOrderData?.status
       ? formatEventDescription(data.transportOrderData.status)

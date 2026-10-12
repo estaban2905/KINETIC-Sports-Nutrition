@@ -37,10 +37,50 @@ describe("parseTracking", () => {
     })
 
     expect(result.events).toEqual([
-      { at: "2018-10-29T09:05:00Z", description: "Pieza en ruta" },
-      { at: "2018-10-26T19:12:00Z", description: "Pieza en transito al destino" },
-      { at: "2018-10-26T18:42:00Z", description: "Recepcionado" },
+      { at: "2018-10-29T09:05:00Z", description: "Pieza en ruta", code: null },
+      { at: "2018-10-26T19:12:00Z", description: "Pieza en transito al destino", code: null },
+      { at: "2018-10-26T18:42:00Z", description: "Recepcionado", code: null },
     ])
+  })
+
+  it("keeps each event's Chilexpress eventCode (documented sample response)", () => {
+    const result = parseTracking({
+      data: {
+        trackingEvents: [
+          { description: "RECEPCIONADO", eventDateTime: "2018-10-26T18:42:00Z", code: { eventCode: "4" } },
+          { description: "PIEZA EN RUTA", eventDateTime: "2018-10-29T09:05:00Z", code: { eventCode: 13 } },
+        ],
+      },
+    })
+
+    expect(result.events.map((e) => e.code)).toEqual(["13", "4"])
+  })
+
+  it("extracts the delivery certificate URL from the delivery event (documented sample)", () => {
+    const url = "https://cxpgdastprod.blob.core.windows.net/certificado-pod/712694380873/certificado_pod_712694380873.pdf"
+    const result = parseTracking({
+      data: {
+        trackingEvents: [
+          { description: "PIEZA EN RUTA", eventDateTime: "2018-10-29T09:05:00Z", code: { eventCode: "13" } },
+          {
+            description: "PIEZA ENTREGADA A DESTINATARIO",
+            eventDateTime: "2018-10-29T16:06:00Z",
+            certificadoEntrega: url,
+            code: { eventCode: "14", clientEventDescription: "ENTREGADO" },
+          },
+        ],
+      },
+    })
+
+    expect(result.certificateUrl).toBe(url)
+  })
+
+  it("has no certificate until a delivery event carries one", () => {
+    const result = parseTracking({
+      data: { trackingEvents: [{ description: "PIEZA EN RUTA", code: { eventCode: "13" } }] },
+    })
+
+    expect(result.certificateUrl).toBeNull()
   })
 
   it("reports the current status even when Chilexpress has no events yet (real test-env response)", () => {
