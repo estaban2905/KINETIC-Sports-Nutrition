@@ -9,7 +9,7 @@ export type EnviosOptions = {
   baseUrl?: string
   /** Número de Tarjeta Cliente Chilexpress (TCC). Pruebas: 18578680. */
   customerCardNumber: string
-  /** RUT de la empresa, sin puntos ni dígito verificador. Pruebas: 96756430. */
+  /** RUT de la empresa, sin puntos ni dígito verificador. Pruebas: 96756430. Solo se usa para consultar el tracking. */
   rut?: string
 }
 
@@ -77,7 +77,10 @@ export function buildTransportOrderRequest(input: TransportOrderInput) {
       countyOfOriginCoverageCode: sender.coverageCode,
       // 2 = binary image + data
       labelType: 2,
-      ...(options.rut ? { marketplaceRut: options.rut, sellerRut: options.rut } : {}),
+      // marketplaceRut / sellerRut are deliberately NOT sent: they're only for
+      // marketplace accounts, and Chilexpress rejects the order (code -16)
+      // when they're sent on an account that isn't configured as one. The
+      // company RUT is only needed for tracking (see tracking.ts).
     },
     details: [
       {

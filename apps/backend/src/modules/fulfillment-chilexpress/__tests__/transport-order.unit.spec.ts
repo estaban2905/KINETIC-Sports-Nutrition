@@ -43,8 +43,10 @@ describe("buildTransportOrderRequest", () => {
       customerCardNumber: "18578680",
       countyOfOriginCoverageCode: "PROV",
       labelType: 2,
-      sellerRut: "96756430",
     })
+    // Chilexpress rejects these (code -16) on accounts that aren't marketplaces.
+    expect(body.header).not.toHaveProperty("sellerRut")
+    expect(body.header).not.toHaveProperty("marketplaceRut")
     const [dest, dev] = body.details[0].addresses
     expect(dest).toMatchObject({
       addressType: "DEST",
