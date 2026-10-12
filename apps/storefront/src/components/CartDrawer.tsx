@@ -11,12 +11,14 @@ import type { Stripe, StripeCardElement } from '@stripe/stripe-js';
 import { useCart, type CartShippingOption } from '../context/CartContext';
 import { getStripe } from '../lib/stripe';
 import { listComunas } from '../lib/medusa';
-import { validateContactForm, type ContactFormValues } from '../lib/checkoutValidation';
+import { contactFromCart, validateContactForm, type ContactFormValues } from '../lib/checkoutValidation';
 import { ComunaAutocomplete } from './ComunaAutocomplete';
 
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Open straight at the address step (e.g. coming back from a cancelled payment). */
+  startAtCheckout?: boolean;
 }
 
 type CheckoutStep = 'cart' | 'address' | 'shipping' | 'payment';
@@ -66,7 +68,7 @@ export function isAllowedPaymentProvider(
   return allowed.some((id) => providerId.includes(id));
 }
 
-export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
+export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAtCheckout = false }) => {
   const {
     cart,
     updateItemQuantity,
@@ -81,13 +83,22 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   } = useCart();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<CheckoutStep>('cart');
+  const [step, setStep] = useState<CheckoutStep>(startAtCheckout && (cart?.items?.length ?? 0) > 0 ? 'address' : 'cart');
   const [couponCode, setCouponCode] = useState('');
   const [couponFeedback, setCouponFeedback] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
 
-  const [contact, setContact] = useState<ContactFormValues>({
-    name: '', email: '', phone: '', street: '', streetNumber: '', apartment: '', city: '',
-  });
+  // Prefilled from the cart: the drawer unmounts on close, so local state alone
+  // would lose the customer's address every time.
+  const [contact, setContact] = useState<ContactFormValues>(() =>
+    contactFromCart(cart?.email, cart?.shipping_address)
+  );
+  const contactPrefilled = useRef(!!cart?.shipping_address);
+  useEffect(() => {
+    // The cart can arrive after the drawer mounts (page just loaded).
+    if (contactPrefilled.current || !cart?.shipping_address) return;
+    contactPrefilled.current = true;
+    setContact(contactFromCart(cart.email, cart.shipping_address));
+  }, [cart?.email, cart?.shipping_address]);
   const [touched, setTouched] = useState<Partial<Record<keyof ContactFormValues, boolean>>>({});
   const [comunas, setComunas] = useState<string[]>([]);
   const contactErrors = validateContactForm(contact, comunas);
@@ -204,6 +215,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
       setTouched({
         name: true, email: true, phone: true, street: true, streetNumber: true, city: true,
       });
+      setCheckoutError('Completa los campos marcados en rojo para continuar.');
+      // Errors render after the state update; then move focus to the first one.
+      const form = e.currentTarget;
+      requestAnimationFrame(() => form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
       return;
     }
     setIsSubmitting(true);
@@ -513,7 +528,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                 )}
 
                 {step === 'address' && (
-                  <form onSubmit={handleAddressSubmit} className="space-y-3">
+                  <form onSubmit={handleAddressSubmit} noValidate className="space-y-3">
                     <Field
                       label="Nombre Completo" value={contact.name} placeholder="Ej: Matías Silva" autoComplete="name"
                       onChange={(v) => setContact({ ...contact, name: v })}
@@ -564,7 +579,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
                     <SubmitButton
                       loading={isSubmitting}
-                      disabled={Object.keys(contactErrors).length > 0}
                       label="Continuar a Envío"
                     />
                   </form>
@@ -813,6 +827,7 @@ function Field({
       <label className="block text-[11px] font-mono uppercase text-neutral-400 mb-1">{label}</label>
       <input
         required
+        aria-invalid={!!error}
         type={type}
         autoComplete={autoComplete}
         value={value}

@@ -70,7 +70,7 @@ export function ConfirmCheckoutPage() {
       <Shell>
         <XCircle className="w-12 h-12 text-neutral-600" />
         <p className="text-neutral-300">Cancelaste el pago. Tu carrito sigue guardado.</p>
-        <Link to="/" className="text-lime-400 underline">Volver a la tienda</Link>
+        <Link to="/?carrito=1" className="text-lime-400 underline">Volver a mi carrito</Link>
       </Shell>
     );
   }

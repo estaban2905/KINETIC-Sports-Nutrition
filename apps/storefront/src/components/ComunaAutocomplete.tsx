@@ -69,6 +69,7 @@ export function ComunaAutocomplete({
         </label>
         <input
           required
+          aria-invalid={!!error}
           type="text"
           autoComplete="address-level2"
           value={value}
@@ -92,6 +93,7 @@ export function ComunaAutocomplete({
       <div className="relative">
         <input
           required
+          aria-invalid={!!error}
           type="text"
           role="combobox"
           aria-expanded={isOpen}

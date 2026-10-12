@@ -81,3 +81,46 @@ export function validateContactForm(
 export function isContactFormValid(values: ContactFormValues, knownComunas: string[]): boolean {
   return Object.keys(validateContactForm(values, knownComunas)).length === 0;
 }
+
+type CartAddressLike = {
+  first_name?: string | null;
+  last_name?: string | null;
+  address_1?: string | null;
+  address_2?: string | null;
+  city?: string | null;
+  phone?: string | null;
+};
+
+/**
+ * Rebuilds the contact form from what the cart already saved, so closing the
+ * drawer (which unmounts it) or coming back from the payment provider doesn't
+ * make the customer retype everything. Inverse of handleAddressSubmit.
+ */
+export function contactFromCart(
+  email: string | null | undefined,
+  address: CartAddressLike | null | undefined
+): ContactFormValues {
+  const empty: ContactFormValues = {
+    name: "", email: email ?? "", phone: "", street: "", streetNumber: "", apartment: "", city: "",
+  };
+  if (!address) return empty;
+
+  const first = (address.first_name ?? "").trim();
+  const last = (address.last_name ?? "").trim();
+  // The form stores a single-word name as first_name === last_name.
+  const name = first && last && first !== last ? `${first} ${last}` : first || last;
+
+  const parts = (address.address_1 ?? "").trim().split(/\s+/);
+  const lastPart = parts[parts.length - 1] ?? "";
+  const hasNumber = parts.length > 1 && /^\d+[a-zA-Z]?$/.test(lastPart);
+
+  return {
+    ...empty,
+    name,
+    phone: address.phone ?? "",
+    street: hasNumber ? parts.slice(0, -1).join(" ") : parts.join(" "),
+    streetNumber: hasNumber ? lastPart : "",
+    apartment: address.address_2 ?? "",
+    city: address.city ?? "",
+  };
+}
