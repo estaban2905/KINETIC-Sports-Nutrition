@@ -20,7 +20,7 @@ describe("parseTracking", () => {
 
     expect(result).toMatchObject({
       delivered: true,
-      status: "DESCARGADA",
+      status: "Descargada",
       deliveredAt: "2018-10-29T16:06:00Z",
     })
   })
@@ -41,6 +41,18 @@ describe("parseTracking", () => {
       { at: "2018-10-26T19:12:00Z", description: "Pieza en transito al destino" },
       { at: "2018-10-26T18:42:00Z", description: "Recepcionado" },
     ])
+  })
+
+  it("reports the current status even when Chilexpress has no events yet (real test-env response)", () => {
+    const result = parseTracking({
+      data: {
+        trackingEvents: [],
+        deliveryData: { deliveryDateTime: "" },
+        transportOrderData: { status: "EN PRE-RECEPCION" },
+      },
+    })
+
+    expect(result).toMatchObject({ delivered: false, status: "En pre-recepcion", events: [] })
   })
 
   it("is not delivered while the package is still moving", () => {

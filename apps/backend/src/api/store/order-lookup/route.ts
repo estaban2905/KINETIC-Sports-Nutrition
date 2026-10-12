@@ -77,6 +77,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         delivered_at: f.delivered_at,
         labels: f.labels,
         tracking_events: Array.isArray(f.data?.tracking_events) ? f.data.tracking_events : [],
+        tracking_status: typeof f.data?.tracking_status === "string" ? f.data.tracking_status : null,
       })),
     },
   })

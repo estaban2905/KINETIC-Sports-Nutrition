@@ -80,6 +80,7 @@ export interface OrderLookupResult {
     delivered_at: string | null;
     labels?: { tracking_number: string; tracking_url: string | null }[];
     tracking_events?: { at: string | null; description: string }[];
+    tracking_status?: string | null;
   }[];
 }
 

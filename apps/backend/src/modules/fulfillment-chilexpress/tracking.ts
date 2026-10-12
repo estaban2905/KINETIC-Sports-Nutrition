@@ -13,7 +13,7 @@ export type TrackingEvent = {
 
 export type TrackingResult = {
   delivered: boolean
-  /** Chilexpress's own current status text (e.g. "DESCARGADA"), for logs. */
+  /** Chilexpress's own current status text, readable ("En pre-recepcion"). Reported even before any event exists. */
   status: string | null
   deliveredAt: string | null
   /** Every event Chilexpress registered, newest first. */
@@ -65,7 +65,9 @@ export function parseTracking(body: TrackingResponse | null): TrackingResult {
 
   return {
     delivered: Boolean(deliveryEvent || data?.deliveryData?.deliveryDateTime),
-    status: data?.transportOrderData?.status ?? null,
+    status: data?.transportOrderData?.status
+      ? formatEventDescription(data.transportOrderData.status)
+      : null,
     deliveredAt,
     events,
   }

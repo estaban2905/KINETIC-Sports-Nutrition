@@ -58,9 +58,16 @@ export default async function syncChilexpressTracking(container: MedusaContainer
       const known = Array.isArray(fulfillment.data.tracking_events)
         ? fulfillment.data.tracking_events.length
         : 0
-      if (tracking.events.length !== known) {
+      if (
+        tracking.events.length !== known ||
+        (tracking.status ?? null) !== (fulfillment.data.tracking_status ?? null)
+      ) {
         await fulfillmentModule.updateFulfillment(fulfillment.id, {
-          data: { ...fulfillment.data, tracking_events: tracking.events },
+          data: {
+            ...fulfillment.data,
+            tracking_events: tracking.events,
+            tracking_status: tracking.status,
+          },
         })
       }
 
