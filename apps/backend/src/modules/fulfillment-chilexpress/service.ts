@@ -49,6 +49,8 @@ const DEFAULT_PACKAGE_HEIGHT_CM = 20
 const DEFAULT_PACKAGE_WIDTH_CM = 15
 const DEFAULT_PACKAGE_LENGTH_CM = 10
 const DEFAULT_ITEM_WEIGHT_GRAMS = 500
+const QUOTE_MAX_RETRIES = 2
+const QUOTE_RETRY_DELAY_MS = 300
 
 type CourierServiceOption = {
   serviceTypeCode: number
@@ -57,15 +59,14 @@ type CourierServiceOption = {
 }
 
 /**
- * Real Chilexpress rate quoting, with a flat-rate fallback.
+ * Real Chilexpress rate quoting. The flat `fallbackRate` only applies when no
+ * CHILEXPRESS_API_KEY is configured at all (local dev); a live quote that
+ * fails or has no service is an error, never a made-up price.
  *
  * Verified 2026-09-27 against the real Cotizador + Coverage APIs (both
  * subscriptions active). The rating endpoint needs Chilexpress's own
  * countyCode (e.g. "PROV"), not a comuna name or region — that code is
  * resolved from `shipping_address.city` via the Coverage API in ./coverage.ts.
- * If that subscription/key isn't configured, or the comuna can't be
- * resolved, or either API call fails, this whole thing degrades to
- * `fallbackRate` — checkout must never block on a shipping quote.
  */
 class ChilexpressFulfillmentProviderService extends AbstractFulfillmentProviderService {
   static identifier = "chilexpress"
@@ -114,34 +115,51 @@ class ChilexpressFulfillmentProviderService extends AbstractFulfillmentProviderS
     totalWeightGrams: number
     declaredWorth: number
   }): Promise<CourierServiceOption> {
-    const response = await fetch(
-      `${this.options_.baseUrl ?? "https://services.wschilexpress.com"}/rating/api/v1.0/rates/courier`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Ocp-Apim-Subscription-Key": this.options_.apiKey!,
-        },
-        body: JSON.stringify({
-          originCountyCode: this.options_.originCoverageCode,
-          destinationCountyCode: args.destinationCountyCode,
-          package: {
-            weight: (Math.max(1, args.totalWeightGrams) / 1000).toFixed(2),
-            height: this.options_.defaultPackageHeightCm ?? DEFAULT_PACKAGE_HEIGHT_CM,
-            width: this.options_.defaultPackageWidthCm ?? DEFAULT_PACKAGE_WIDTH_CM,
-            length: this.options_.defaultPackageLengthCm ?? DEFAULT_PACKAGE_LENGTH_CM,
+    const url = `${this.options_.baseUrl ?? "https://services.wschilexpress.com"}/rating/api/v1.0/rates/courier`
+    const body = JSON.stringify({
+      originCountyCode: this.options_.originCoverageCode,
+      destinationCountyCode: args.destinationCountyCode,
+      package: {
+        weight: (Math.max(1, args.totalWeightGrams) / 1000).toFixed(2),
+        height: this.options_.defaultPackageHeightCm ?? DEFAULT_PACKAGE_HEIGHT_CM,
+        width: this.options_.defaultPackageWidthCm ?? DEFAULT_PACKAGE_WIDTH_CM,
+        length: this.options_.defaultPackageLengthCm ?? DEFAULT_PACKAGE_LENGTH_CM,
+      },
+      productType: 3, // 3 = Encomienda
+      contentType: 5, // 5 = Otros — no hay una categoría de suplementos/nutrición
+      declaredWorth: Math.max(1, args.declaredWorth),
+      deliveryTime: 0, // 0 = todos los servicios disponibles
+    })
+
+    // The rating API intermittently answers 502 under load (seen when quoting
+    // many comunas in a row), so a 5xx or a timeout is retried before giving
+    // up. A 4xx or a normal 200 is final and not retried.
+    let response: Response | undefined
+    let lastError: unknown
+    for (let attempt = 0; attempt <= QUOTE_MAX_RETRIES; attempt++) {
+      try {
+        response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Ocp-Apim-Subscription-Key": this.options_.apiKey!,
           },
-          productType: 3, // 3 = Encomienda
-          contentType: 5, // 5 = Otros — no hay una categoría de suplementos/nutrición
-          declaredWorth: Math.max(1, args.declaredWorth),
-          deliveryTime: 0, // 0 = todos los servicios disponibles
-        }),
-        // Without a timeout, a slow/hanging Chilexpress response blocks
-        // checkout indefinitely instead of degrading to the fallback rate
-        // — the whole point of having one.
-        signal: AbortSignal.timeout(3000),
+          body,
+          // Without a timeout, a slow/hanging Chilexpress response blocks
+          // checkout indefinitely.
+          signal: AbortSignal.timeout(3000),
+        })
+        if (response.status < 500) break
+        lastError = new Error(`Chilexpress respondió ${response.status}`)
+      } catch (error) {
+        response = undefined
+        lastError = error
       }
-    )
+      if (attempt < QUOTE_MAX_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, QUOTE_RETRY_DELAY_MS))
+      }
+    }
+    if (!response) throw lastError
 
     if (!response.ok) {
       throw new Error(`Chilexpress respondió ${response.status}`)
@@ -162,7 +180,13 @@ class ChilexpressFulfillmentProviderService extends AbstractFulfillmentProviderS
     }, null)
 
     if (!cheapest) {
-      throw new Error("Chilexpress no devolvió ningún servicio de envío disponible")
+      // 200 with an empty courierServiceOptions list: Chilexpress knows the
+      // comuna but has no service for this origin/destination. NOT_ALLOWED
+      // maps to a 4xx, so it isn't reported to Sentry as a server failure.
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        "Chilexpress no tiene un servicio de envío disponible para esta comuna."
+      )
     }
     return cheapest
   }
@@ -316,59 +340,55 @@ class ChilexpressFulfillmentProviderService extends AbstractFulfillmentProviderS
       return { calculated_amount: fallbackRate, is_calculated_price_tax_inclusive: true }
     }
 
-    try {
-      if (!this.options_.originCoverageCode) {
-        throw new Error("CHILEXPRESS_ORIGIN_CODE no está configurado")
-      }
-      if (!this.options_.coberturaApiKey) {
-        throw new Error("CHILEXPRESS_COBERTURA_API_KEY no está configurado")
-      }
+    if (!this.options_.originCoverageCode) {
+      throw new Error("CHILEXPRESS_ORIGIN_CODE no está configurado")
+    }
+    if (!this.options_.coberturaApiKey) {
+      throw new Error("CHILEXPRESS_COBERTURA_API_KEY no está configurado")
+    }
 
-      // Chilexpress rates by countyCode, not by comuna name/region — resolve
-      // the customer's comuna (stored in shipping_address.city, see
-      // CartDrawer.tsx's checkout form) through the Coverage API.
-      const destinationCountyCode = await resolveCountyCode(context.shipping_address?.city, {
-        apiKey: this.options_.coberturaApiKey,
-        baseUrl: this.options_.coberturaBaseUrl,
-      })
-      if (!destinationCountyCode) {
-        throw new Error(
-          `No se pudo resolver el código de cobertura para la comuna "${context.shipping_address?.city}"`
-        )
-      }
+    // Chilexpress rates by countyCode, not by comuna name/region — resolve
+    // the customer's comuna (stored in shipping_address.city, see
+    // CartDrawer.tsx's checkout form) through the Coverage API.
+    const destinationCountyCode = await resolveCountyCode(context.shipping_address?.city, {
+      apiKey: this.options_.coberturaApiKey,
+      baseUrl: this.options_.coberturaBaseUrl,
+    })
+    if (!destinationCountyCode) {
+      throw new MedusaError(
+        MedusaError.Types.NOT_ALLOWED,
+        `Chilexpress no reconoce la comuna "${context.shipping_address?.city}".`
+      )
+    }
 
-      // None of this store's product variants have `weight` set yet (all
-      // null as of 2026-09-27) — Chilexpress rejects a 0kg package, so an
-      // unweighted item falls back to DEFAULT_ITEM_WEIGHT_GRAMS instead of
-      // silently sending 0. Fix the real weights on the products for
-      // accurate quotes; this is just what keeps checkout from breaking
-      // until then.
-      const totalWeightGrams = (context.items ?? []).reduce(
-        (sum, item) => sum + (item.variant?.weight || DEFAULT_ITEM_WEIGHT_GRAMS) * Number(item.quantity),
+    // None of this store's product variants have `weight` set yet (all
+    // null as of 2026-09-27) — Chilexpress rejects a 0kg package, so an
+    // unweighted item falls back to DEFAULT_ITEM_WEIGHT_GRAMS instead of
+    // silently sending 0. Fix the real weights on the products for
+    // accurate quotes; this is just what keeps checkout from breaking
+    // until then.
+    const totalWeightGrams = (context.items ?? []).reduce(
+      (sum, item) => sum + (item.variant?.weight || DEFAULT_ITEM_WEIGHT_GRAMS) * Number(item.quantity),
+      0
+    )
+    const declaredWorth = Math.round(
+      (context.items ?? []).reduce(
+        (sum, item) => sum + Number(item.unit_price) * Number(item.quantity),
         0
       )
-      const declaredWorth = Math.round(
-        (context.items ?? []).reduce(
-          (sum, item) => sum + Number(item.unit_price) * Number(item.quantity),
-          0
-        )
-      )
+    )
 
-      const cheapest = await this.quoteCheapestService({
-        destinationCountyCode,
-        totalWeightGrams,
-        declaredWorth,
-      })
+    // No fallback rate here on purpose: if Chilexpress has no service for the
+    // comuna (or stays down after retries) this throws, so the storefront
+    // can tell the customer at the address step instead of charging an
+    // invented price and failing later at fulfillment.
+    const cheapest = await this.quoteCheapestService({
+      destinationCountyCode,
+      totalWeightGrams,
+      declaredWorth,
+    })
 
-      return { calculated_amount: Number(cheapest.serviceValue), is_calculated_price_tax_inclusive: true }
-    } catch (error) {
-      console.warn(
-        `[chilexpress] No se pudo cotizar en vivo, usando tarifa fallback ($${fallbackRate}): ${
-          error instanceof Error ? error.message : error
-        }`
-      )
-      return { calculated_amount: fallbackRate, is_calculated_price_tax_inclusive: true }
-    }
+    return { calculated_amount: Number(cheapest.serviceValue), is_calculated_price_tax_inclusive: true }
   }
 }
 

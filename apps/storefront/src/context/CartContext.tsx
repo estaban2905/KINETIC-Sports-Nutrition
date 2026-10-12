@@ -26,6 +26,15 @@ export function describeCartError(err: unknown): string {
   return message || "No se pudo agregar el producto al carrito.";
 }
 
+/**
+ * A shipping option as listed for the cart. `unavailable` is set on a
+ * "calculated" option (Chilexpress) whose live quote failed or has no service
+ * for the cart's comuna — it has no price and must not be shown as $0.
+ */
+export type CartShippingOption = HttpTypes.StoreCartShippingOption & {
+  unavailable?: boolean;
+};
+
 interface CartContextValue {
   cart: HttpTypes.StoreCart | null;
   loading: boolean;
@@ -41,7 +50,7 @@ interface CartContextValue {
   removeItem: (lineItemId: string) => Promise<void>;
   updateCartDetails: (body: HttpTypes.StoreUpdateCart) => Promise<HttpTypes.StoreCart>;
   addPromotionCode: (code: string) => Promise<{ success: boolean; message: string }>;
-  listShippingOptions: () => Promise<HttpTypes.StoreCartShippingOption[]>;
+  listShippingOptions: () => Promise<CartShippingOption[]>;
   addShippingMethod: (optionId: string) => Promise<void>;
   listPaymentProviders: () => Promise<HttpTypes.StorePaymentProvider[]>;
   initiatePaymentSession: (
@@ -208,8 +217,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // it as-is drops `option.type`, which the storefront's shipping-carrier
     // label depends on (see getShippingCarrierInfo in CartDrawer.tsx). Merge
     // just the calculated price onto the original, fully-loaded option.
-    const withCalculatedPrices = await Promise.all(
-      shipping_options.map(async (option) => {
+    // If the quote fails (no Chilexpress service for the comuna, or the API
+    // stayed down after the backend's retries) the option is flagged
+    // `unavailable` instead of being returned without a price, which the
+    // drawer used to render as "$0".
+    const withCalculatedPrices: CartShippingOption[] = await Promise.all(
+      shipping_options.map(async (option): Promise<CartShippingOption> => {
         if (option.price_type !== "calculated") return option;
         try {
           const { shipping_option } = await medusa.store.fulfillment.calculate(option.id, {
@@ -217,7 +230,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           });
           return { ...option, calculated_price: shipping_option.calculated_price };
         } catch {
-          return option;
+          return { ...option, unavailable: true };
         }
       })
     );

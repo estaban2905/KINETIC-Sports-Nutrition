@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { HttpTypes } from '@medusajs/types';
 import type { Stripe, StripeCardElement } from '@stripe/stripe-js';
-import { useCart } from '../context/CartContext';
+import { useCart, type CartShippingOption } from '../context/CartContext';
 import { getStripe } from '../lib/stripe';
 import { listComunas } from '../lib/medusa';
 import { validateContactForm, type ContactFormValues } from '../lib/checkoutValidation';
@@ -96,7 +96,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     listComunas().then(setComunas);
   }, []);
-  const [shippingOptions, setShippingOptions] = useState<HttpTypes.StoreCartShippingOption[]>([]);
+  const [shippingOptions, setShippingOptions] = useState<CartShippingOption[]>([]);
   const [selectedShippingOption, setSelectedShippingOption] = useState<string | null>(null);
   const [paymentProviders, setPaymentProviders] = useState<HttpTypes.StorePaymentProvider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
@@ -126,11 +126,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
       document.body.style.overflow = prevOverflow;
     };
   }, [isOpen, onClose]);
-
-  useEffect(() => {
-    if (step !== 'shipping' || !cart) return;
-    listShippingOptions().then(setShippingOptions).catch(() => setShippingOptions([]));
-  }, [step, cart, listShippingOptions]);
 
   useEffect(() => {
     if (step !== 'payment') return;
@@ -169,6 +164,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const shippingTotal = cart?.shipping_total ?? 0;
   const total = cart?.total ?? 0;
   const hasShippingMethod = (cart?.shipping_methods?.length ?? 0) > 0;
+  // The highlighted option comes from the cart itself when the customer
+  // hasn't clicked one in this session (e.g. after going back and forth), so
+  // "Continuar a Pago" is never enabled with nothing visibly selected.
+  const activeShippingOptionId =
+    selectedShippingOption ?? cart?.shipping_methods?.[0]?.shipping_option_id ?? null;
 
   const freeShippingThreshold = 50000;
   const missingForFreeShipping = Math.max(0, freeShippingThreshold - itemSubtotal);
@@ -206,9 +206,30 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
           phone: contact.phone.trim(),
         },
       });
-      setStep('shipping');
     } catch {
       setCheckoutError('No pudimos guardar tu dirección. Intenta de nuevo.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // The address is saved: quote the shipping options now, so a comuna
+    // Chilexpress can't serve is reported here instead of at the shipping
+    // step (or worse, after payment). The shipping step reuses this result.
+    try {
+      const options = await listShippingOptions();
+      const chilexpressUnavailable = options.some(
+        (option) => option.type?.code === 'chilexpress' && option.unavailable
+      );
+      if (chilexpressUnavailable) {
+        setCheckoutError(
+          'Chilexpress no tiene cobertura para tu comuna o no pudimos cotizar el envío. Revisa la comuna o intenta de nuevo.'
+        );
+        return;
+      }
+      setShippingOptions(options);
+      setStep('shipping');
+    } catch {
+      setCheckoutError('No pudimos verificar la cobertura de envío. Intenta de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -527,7 +548,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                 {step === 'shipping' && (
                   <div className="space-y-3">
                     {shippingOptions.length === 0 ? (
-                      <p className="text-neutral-500 text-xs">Cargando opciones de envío...</p>
+                      <p className="text-neutral-500 text-xs">No hay opciones de envío disponibles para tu dirección.</p>
                     ) : (
                       shippingOptions.map((option) => {
                         const carrier = getShippingCarrierInfo(option);
@@ -537,9 +558,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                             key={option.id}
                             type="button"
                             onClick={() => handleSelectShippingOption(option.id)}
-                            disabled={isSubmitting}
-                            className={`w-full flex items-start justify-between gap-3 p-4 rounded-xl border text-left transition-colors ${
-                              selectedShippingOption === option.id
+                            disabled={isSubmitting || option.unavailable}
+                            className={`w-full flex items-start justify-between gap-3 p-4 rounded-xl border text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                              activeShippingOptionId === option.id
                                 ? 'border-lime-400 bg-lime-400/10'
                                 : 'border-neutral-800 bg-neutral-900/70 hover:border-neutral-600'
                             }`}
@@ -558,9 +579,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                                 </p>
                               )}
                             </div>
-                            <span className="text-lime-400 font-mono text-sm font-bold whitespace-nowrap">
-                              {currency(option.calculated_price?.calculated_amount ?? 0)}
-                            </span>
+                            {option.unavailable ? (
+                              <span className="text-rose-400 font-mono text-xs font-bold whitespace-nowrap">
+                                Sin cobertura
+                              </span>
+                            ) : (
+                              <span className="text-lime-400 font-mono text-sm font-bold whitespace-nowrap">
+                                {currency(option.calculated_price?.calculated_amount ?? 0)}
+                              </span>
+                            )}
                           </button>
                         );
                       })
@@ -570,7 +597,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
                     <SubmitButton
                       loading={isSubmitting}
-                      disabled={!hasShippingMethod}
+                      disabled={!hasShippingMethod || !activeShippingOptionId}
                       label="Continuar a Pago"
                       onClick={() => setStep('payment')}
                     />
