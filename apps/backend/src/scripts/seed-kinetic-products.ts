@@ -199,6 +199,7 @@ export default async function seedKineticProducts({
     fields: ["id", "name"],
   })
   const chileStockLocation =
+    stockLocations.find((l) => l.name === "Bodega Ovalle") ??
     stockLocations.find((l) => l.name === "Bodega Santiago") ??
     stockLocations[0]
 

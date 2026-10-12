@@ -242,11 +242,20 @@ class ChilexpressFulfillmentProviderService extends AbstractFulfillmentProviderS
       0
     )
 
-    const service = await this.quoteCheapestService({
-      destinationCountyCode,
-      totalWeightGrams,
-      declaredWorth,
-    })
+    let service: CourierServiceOption
+    try {
+      service = await this.quoteCheapestService({
+        destinationCountyCode,
+        totalWeightGrams,
+        declaredWorth,
+      })
+    } catch (error) {
+      throw new Error(
+        `Chilexpress no tiene un servicio de envío disponible desde ${this.options_.originCoverageCode} ` +
+          `hacia ${address.city} (${destinationCountyCode}). Elige otra comuna de destino o ` +
+          `coordina este envío por otro medio. Detalle: ${error instanceof Error ? error.message : error}`
+      )
+    }
 
     const recipientName =
       [address.first_name, address.last_name].filter(Boolean).join(" ") || order.email || "Cliente"
