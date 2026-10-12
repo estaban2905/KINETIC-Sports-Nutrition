@@ -218,23 +218,6 @@ export default async function seedChile({
   await createShippingOptionsWorkflow(container).run({
     input: [
       {
-        name: "Envío Estándar",
-        price_type: "flat",
-        provider_id: "manual_manual",
-        service_zone_id: fulfillmentSet.service_zones[0].id,
-        shipping_profile_id: shippingProfile.id,
-        type: {
-          label: "Estándar",
-          description: "Entrega en 2-4 días hábiles.",
-          code: "standard",
-        },
-        prices: [{ currency_code: "clp", amount: 3990 }],
-        rules: [
-          { attribute: "enabled_in_store", value: "true", operator: "eq" },
-          { attribute: "is_return", value: "false", operator: "eq" },
-        ],
-      },
-      {
         name: "Chilexpress",
         // "calculated" invokes ChilexpressFulfillmentProviderService.calculatePrice
         // per cart (real quote once CHILEXPRESS_API_KEY is set, flat fallback otherwise).

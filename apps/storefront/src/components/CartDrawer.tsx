@@ -732,14 +732,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 };
 
 /**
- * The storefront only ever offers two shipping options today (see
- * seed-chile.ts): "Envío Estándar" runs on Medusa's built-in `manual_manual`
- * fulfillment provider — a flat price with zero courier behind it, no
- * automatic label/tracking. Someone at KINETIC has to physically hand the
- * package to whatever courier they choose and paste a tracking number into
- * the order manually if they want one. "Chilexpress" is the only option
- * actually backed by a real carrier with a live quote and (once
- * createFulfillment is implemented) an automatic tracking number.
+ * The storefront's only seeded shipping option is "Chilexpress" (see
+ * seed-chile.ts), backed by a real carrier with a live quote and an automatic
+ * tracking number. Any other option (e.g. one added by hand in the admin on
+ * Medusa's `manual_manual` provider) has no courier behind it: someone at
+ * KINETIC has to hand the package over and paste a tracking number manually.
  */
 function getShippingCarrierInfo(
   option: HttpTypes.StoreCartShippingOption
