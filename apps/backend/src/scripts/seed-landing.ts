@@ -327,7 +327,7 @@ export default async function seedLanding({
     tiktok_url: "https://tiktok.com/@kinetic.nutrition",
     facebook_url: "https://facebook.com/kinetic.nutrition",
     contact_email: "contacto@kineticnutrition.cl",
-    shipping_information: "Envíos gratis en compras sobre $45.000 a todo Chile continental.",
+    shipping_information: "Despachamos a todo Chile continental con Chilexpress. El costo se calcula al ingresar tu dirección.",
     footer_text:
       "© 2025 KINETIC Sports Nutrition. Todos los derechos reservados. Suplementos alimentarios de grado farmacéutico.",
     footer_description:

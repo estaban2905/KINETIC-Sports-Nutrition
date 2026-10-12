@@ -154,7 +154,7 @@ const DEFAULT_MEMBERSHIP: UserMembership = {
   status: 'active',
   nextBillingDate: '15 de Octubre 2026',
   nextDeliveryEstimate: '17 - 18 de Octubre 2026',
-  shippingCarrier: 'Chilexpress Prioritario (Gratis)',
+  shippingCarrier: 'Chilexpress Prioritario',
   paymentMethod: 'Tarjeta de Crédito terminada en •••• 4242',
   welcomeGiftIncluded: true,
 };
@@ -263,7 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       status: 'active',
       nextBillingDate: '28 de Octubre 2026',
       nextDeliveryEstimate: '30 - 31 de Octubre 2026',
-      shippingCarrier: 'Chilexpress Prioritario (Gratis)',
+      shippingCarrier: 'Chilexpress Prioritario',
       paymentMethod: 'Tarjeta guardada en Webpay / Oneclick',
       welcomeGiftIncluded: true,
     };

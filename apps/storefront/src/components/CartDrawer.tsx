@@ -207,9 +207,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
   const activeShippingOptionId =
     selectedShippingOption ?? cart?.shipping_methods?.[0]?.shipping_option_id ?? null;
 
-  const freeShippingThreshold = 50000;
-  const missingForFreeShipping = Math.max(0, freeShippingThreshold - itemSubtotal);
-  const freeShippingProgress = Math.min(100, (itemSubtotal / freeShippingThreshold) * 100);
 
   const applyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -428,29 +425,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
                   <X className="w-5 h-5" />
                 </button>
               </div>
-
-              {/* Free Shipping Progress Bar */}
-              {step === 'cart' && (
-                <div className="bg-neutral-900/90 px-5 py-3 border-b border-neutral-800 text-xs">
-                  <div className="flex items-center justify-between mb-1.5 font-mono">
-                    <span className="flex items-center gap-1.5 text-neutral-300">
-                      <Truck className="w-3.5 h-3.5 text-lime-400" />
-                      {missingForFreeShipping === 0 ? (
-                        <span className="text-lime-400 font-bold">¡Tienes Envío Gratis Desbloqueado!</span>
-                      ) : (
-                        <span>Faltan <strong className="text-white">{currency(missingForFreeShipping)}</strong> para Envío Gratis</span>
-                      )}
-                    </span>
-                    <span className="text-neutral-400 font-bold">{freeShippingProgress.toFixed(0)}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-lime-500 to-lime-300 transition-all duration-300"
-                      style={{ width: `${freeShippingProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
 
               {/* Body */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4">

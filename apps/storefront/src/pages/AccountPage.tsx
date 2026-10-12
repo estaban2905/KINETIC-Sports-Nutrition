@@ -583,7 +583,7 @@ export const AccountPage: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-xs text-neutral-400 mt-1">
-                      Ahorro continuo del 15% en cada entrega mensual con despacho prioritario gratuito.
+                      Ahorro continuo del 15% en cada entrega mensual con despacho prioritario.
                     </p>
                   </div>
 
@@ -659,7 +659,7 @@ export const AccountPage: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-neutral-300">
                       <Check className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
-                      <span>Despacho Chilexpress 100% Gratis</span>
+                      <span>Despacho con Chilexpress y seguimiento</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-neutral-300">
                       <Gift className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
@@ -742,7 +742,7 @@ export const AccountPage: React.FC = () => {
                   </h3>
                   <p className="text-neutral-400 text-sm mt-2 max-w-md mx-auto">
                     Recibe tu tarro de PROTEIN X CFM cada mes en la puerta de tu casa. Nunca te quedes sin proteína,
-                    con envío gratis y Shaker de regalo en tu primer pedido.
+                    con despacho por Chilexpress y Shaker de regalo en tu primer pedido.
                   </p>
                 </div>
 
@@ -752,8 +752,8 @@ export const AccountPage: React.FC = () => {
                     <span className="text-xs text-neutral-400">$34.390 en vez de $42.990</span>
                   </div>
                   <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-                    <span className="text-lime-400 font-bold text-lg font-display block">Envío $0</span>
-                    <span className="text-xs text-neutral-400">Despacho gratis con Chilexpress</span>
+                    <span className="text-lime-400 font-bold text-lg font-display block">Chilexpress</span>
+                    <span className="text-xs text-neutral-400">Despacho a todo Chile con seguimiento</span>
                   </div>
                   <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
                     <span className="text-lime-400 font-bold text-lg font-display block">1-Click</span>

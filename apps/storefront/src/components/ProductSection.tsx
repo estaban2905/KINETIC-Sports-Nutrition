@@ -385,7 +385,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
                   </div>
                   <div className="flex items-center gap-2 text-neutral-300">
                     <Check className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
-                    <span>Despacho automático cada 30 días con Chilexpress Prioritario (Gratis)</span>
+                    <span>Despacho automático cada 30 días con Chilexpress</span>
                   </div>
                   <div className="flex items-center gap-2 text-neutral-300">
                     <Check className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />

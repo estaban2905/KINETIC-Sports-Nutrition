@@ -115,7 +115,7 @@ export const SpecialOffer: React.FC<SpecialOfferProps> = ({ product, onClaimOffe
               <p className="mt-4 text-neutral-300 text-sm sm:text-base max-w-xl leading-relaxed">
                 {banner?.subtitle ??
                   settings?.offer_fallback_subtitle ??
-                  `Obtén tu envase ${currentSize.name} de ${currentSize.weight} con envío prioritario gratuito a todo el país y shaker térmico de regalo con tu primera orden.`}
+                  `Obtén tu envase ${currentSize.name} de ${currentSize.weight} con despacho a todo el país y shaker térmico de regalo con tu primera orden.`}
               </p>
 
               {/* Countdown Timer Block */}
