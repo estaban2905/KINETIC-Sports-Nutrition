@@ -4,12 +4,8 @@ import {
   Modules,
   OrderWorkflowEvents,
 } from "@medusajs/framework/utils"
-
-const currency = new Intl.NumberFormat("es-CL", {
-  style: "currency",
-  currency: "CLP",
-  maximumFractionDigits: 0,
-})
+import { orderPlacedEmail } from "../lib/email-templates"
+import { Sentry } from "../lib/sentry"
 
 export default async function orderPlacedHandler({
   event,
@@ -27,12 +23,15 @@ export default async function orderPlacedHandler({
       "email",
       "total",
       "item_subtotal",
+      "discount_total",
       "shipping_total",
       "items.product_title",
       "items.variant_title",
       "items.quantity",
       "items.total",
+      "items.thumbnail",
       "shipping_address.address_1",
+      "shipping_address.address_2",
       "shipping_address.city",
     ],
     filters: { id: event.data.id },
@@ -44,42 +43,14 @@ export default async function orderPlacedHandler({
     return
   }
 
-  const itemsHtml = (order.items ?? [])
-    .map((item: any) => {
-      const variant =
-        item.variant_title && item.variant_title !== "Único" ? ` (${item.variant_title})` : ""
-      return `<tr>
-        <td style="padding:6px 0;">${item.product_title}${variant} × ${item.quantity}</td>
-        <td style="padding:6px 0; text-align:right;">${currency.format(item.total ?? 0)}</td>
-      </tr>`
-    })
-    .join("")
-
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #111;">
-      <h2>¡Gracias por tu compra!</h2>
-      <p>Tu pedido <strong>#${order.display_id}</strong> fue confirmado.</p>
-      <table style="width:100%; border-collapse: collapse; margin: 16px 0;">
-        ${itemsHtml}
-      </table>
-      <p>Subtotal: ${currency.format(order.item_subtotal ?? 0)}</p>
-      <p>Envío: ${currency.format(order.shipping_total ?? 0)}</p>
-      <p style="font-size: 18px;"><strong>Total: ${currency.format(order.total ?? 0)}</strong></p>
-      ${
-        order.shipping_address
-          ? `<p>Dirección de envío: ${order.shipping_address.address_1}, ${order.shipping_address.city}</p>`
-          : ""
-      }
-      <p>Puedes seguir tu pedido en cualquier momento con tu número de orden y tu correo.</p>
-    </div>
-  `
+  const { subject, html } = orderPlacedEmail(order)
 
   try {
     await notificationModuleService.createNotifications({
       to: order.email,
       channel: "email",
       content: {
-        subject: `Confirmación de tu pedido #${order.display_id} — KINETIC Sports Nutrition`,
+        subject,
         html,
       },
       data: { order_id: order.id },
@@ -93,6 +64,7 @@ export default async function orderPlacedHandler({
         err instanceof Error ? err.message : err
       }`
     )
+    Sentry.captureException(err)
   }
 
   // TODO: Integrar boleta/factura electrónica (SII) acá.

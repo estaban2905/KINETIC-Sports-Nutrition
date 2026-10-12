@@ -1,6 +1,7 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
 import { FulfillmentWorkflowEvents } from "@medusajs/framework/utils"
-import { escapeHtml, sendFulfillmentEmail } from "../lib/fulfillment-email"
+import { sendFulfillmentEmail } from "../lib/fulfillment-email"
+import { deliveryEmail } from "../lib/email-templates"
 
 export default async function deliveryCreatedHandler({
   event,
@@ -10,16 +11,7 @@ export default async function deliveryCreatedHandler({
     fulfillmentId: event.data.id,
     noNotification: event.data.no_notification,
     trigger: "delivery.created",
-    subject: (displayId) => `Tu pedido #${displayId} fue entregado — KINETIC Sports Nutrition`,
-    body: ({ displayId, certificateUrl }) => `
-      <h2>Tu pedido fue entregado</h2>
-      <p>Tu pedido <strong>#${displayId}</strong> fue entregado.</p>
-      ${
-        certificateUrl
-          ? `<p><a href="${escapeHtml(certificateUrl)}">Ver certificado de entrega</a></p>`
-          : ""
-      }
-    `,
+    build: ({ displayId, certificateUrl }) => deliveryEmail({ displayId, certificateUrl }),
   })
 }
 

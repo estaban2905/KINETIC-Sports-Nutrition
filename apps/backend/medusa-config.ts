@@ -114,6 +114,12 @@ if (process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL) {
   })
 }
 
+if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
+  console.warn(
+    "[email] RESEND_API_KEY / RESEND_FROM_EMAIL no están configurados: los clientes NO recibirán correos de la tienda (confirmación, envío, entrega)."
+  )
+}
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,

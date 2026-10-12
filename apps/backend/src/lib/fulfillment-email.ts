@@ -1,5 +1,6 @@
 import type { MedusaContainer } from "@medusajs/framework"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+import { Sentry } from "./sentry"
 
 /** Chilexpress's public tracking page; the OT number is typed into its form (no deep link). */
 export const CHILEXPRESS_TRACKING_PAGE = "https://centrodeayuda.chilexpress.cl/seguimiento"
@@ -9,24 +10,6 @@ export type FulfillmentEmailContext = {
   trackingNumbers: string[]
   isChilexpress: boolean
   certificateUrl: string | null
-}
-
-export function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-}
-
-/** Same layout as the order-placed email (subscribers/order-placed.ts). */
-export function wrapEmailHtml(content: string): string {
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #111;">
-      ${content}
-      <p>Puedes seguir tu pedido en cualquier momento con tu número de orden y tu correo.</p>
-    </div>
-  `
 }
 
 /**
@@ -41,8 +24,7 @@ export async function sendFulfillmentEmail(
     fulfillmentId: string
     noNotification?: boolean
     trigger: "shipment.created" | "delivery.created"
-    subject: (displayId: number) => string
-    body: (context: FulfillmentEmailContext) => string
+    build: (context: FulfillmentEmailContext) => { subject: string; html: string }
   }
 ): Promise<void> {
   if (args.noNotification) return
@@ -94,13 +76,11 @@ export async function sendFulfillmentEmail(
       certificateUrl,
     }
 
+    const { subject, html } = args.build(context)
     await container.resolve(Modules.NOTIFICATION).createNotifications({
       to: order.email,
       channel: "email",
-      content: {
-        subject: args.subject(order.display_id),
-        html: wrapEmailHtml(args.body(context)),
-      },
+      content: { subject, html },
       data: { order_id: order.id, fulfillment_id: args.fulfillmentId },
       trigger_type: args.trigger,
       resource_id: order.id,
@@ -112,5 +92,6 @@ export async function sendFulfillmentEmail(
         err instanceof Error ? err.message : err
       }`
     )
+    Sentry.captureException(err)
   }
 }
