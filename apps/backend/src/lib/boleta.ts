@@ -44,6 +44,7 @@ function itemName(item: BoletaOrderItem): string {
 export function buildBoletaPayload(
   order: BoletaOrder,
   emisor: Pick<SimpleFacturaConfig, "rutEmisor" | "razonSocial" | "giro" | "dirOrigen" | "comunaOrigen">,
+  extras: { observaciones?: string; tipoPago?: string } = {},
   fecha: string = fechaChile()
 ): { payload: Record<string, unknown>; total: number } {
   const detalle: Record<string, unknown>[] = []
@@ -98,7 +99,8 @@ export function buildBoletaPayload(
         },
         Detalle: detalle,
       },
-      TipoPago: "CONTADO",
+      ...(extras.observaciones ? { Observaciones: extras.observaciones.slice(0, 500) } : {}),
+      TipoPago: extras.tipoPago ?? "CONTADO",
     },
   }
 }

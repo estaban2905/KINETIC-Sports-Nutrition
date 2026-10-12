@@ -11,7 +11,10 @@ import type { Stripe, StripeCardElement } from '@stripe/stripe-js';
 import { useCart, type CartShippingOption } from '../context/CartContext';
 import { getStripe } from '../lib/stripe';
 import { listComunas } from '../lib/medusa';
-import { contactFromCart, validateContactForm, type ContactFormValues } from '../lib/checkoutValidation';
+import {
+  billingFromCart, billingToMetadata, contactFromCart, formatRut, validateBillingForm, validateContactForm,
+  type BillingFormValues, type ContactFormValues,
+} from '../lib/checkoutValidation';
 import { ComunaAutocomplete } from './ComunaAutocomplete';
 
 interface CartDrawerProps {
@@ -103,6 +106,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
   const [comunas, setComunas] = useState<string[]>([]);
   const contactErrors = validateContactForm(contact, comunas);
   const markTouched = (field: keyof ContactFormValues) => setTouched((t) => ({ ...t, [field]: true }));
+
+  // Boleta (default) or factura: a factura needs the company's data, kept in
+  // cart.metadata.billing and read by the backend when it emits the document.
+  const [billing, setBilling] = useState<BillingFormValues>(() => billingFromCart(cart?.metadata));
+  const [billingTouched, setBillingTouched] = useState<Partial<Record<keyof BillingFormValues, boolean>>>({});
+  const billingErrors = validateBillingForm(billing);
+  const markBillingTouched = (field: keyof BillingFormValues) => setBillingTouched((t) => ({ ...t, [field]: true }));
 
   useEffect(() => {
     listComunas().then(setComunas);
@@ -218,10 +228,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (Object.keys(contactErrors).length > 0) {
+    if (Object.keys(contactErrors).length > 0 || Object.keys(billingErrors).length > 0) {
       setTouched({
         name: true, email: true, phone: true, street: true, streetNumber: true, city: true,
       });
+      setBillingTouched({ rut: true, razonSocial: true, giro: true, direccion: true, comuna: true });
       setCheckoutError('Completa los campos marcados en rojo para continuar.');
       // Errors render after the state update; then move focus to the first one.
       const form = e.currentTarget;
@@ -234,6 +245,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
       const [first_name, ...rest] = contact.name.trim().split(' ');
       await updateCartDetails({
         email: contact.email,
+        metadata: { billing: billingToMetadata(billing) },
         shipping_address: {
           first_name: first_name || contact.name,
           last_name: rest.join(' ') || first_name || contact.name,
@@ -558,6 +570,66 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
                       onBlur={() => markTouched('city')}
                       error={touched.city ? contactErrors.city : undefined}
                     />
+
+                    <div className="pt-1">
+                      <p className="block text-[11px] font-mono uppercase text-neutral-400 mb-1">Documento tributario</p>
+                      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Documento tributario">
+                        {(['boleta', 'factura'] as const).map((tipo) => (
+                          <button
+                            key={tipo}
+                            type="button"
+                            role="radio"
+                            aria-checked={billing.tipo === tipo}
+                            onClick={() => setBilling({ ...billing, tipo })}
+                            className={`py-2.5 rounded-lg border text-xs font-bold uppercase font-display tracking-wider transition-colors ${
+                              billing.tipo === tipo
+                                ? 'border-lime-400 bg-lime-400/10 text-lime-400'
+                                : 'border-neutral-800 bg-neutral-900/70 text-neutral-400 hover:border-neutral-600'
+                            }`}
+                          >
+                            {tipo === 'boleta' ? 'Boleta' : 'Factura'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {billing.tipo === 'factura' && (
+                      <div className="space-y-3 p-3 rounded-xl border border-neutral-800 bg-neutral-900/40">
+                        <Field
+                          label="RUT de la empresa" value={billing.rut} placeholder="76.123.456-7" autoComplete="off"
+                          onChange={(v) => setBilling({ ...billing, rut: formatRut(v) })}
+                          onBlur={() => markBillingTouched('rut')}
+                          error={billingTouched.rut ? billingErrors.rut : undefined}
+                        />
+                        <Field
+                          label="Razón social" value={billing.razonSocial} placeholder="Mi Empresa SpA" autoComplete="organization"
+                          onChange={(v) => setBilling({ ...billing, razonSocial: v })}
+                          onBlur={() => markBillingTouched('razonSocial')}
+                          error={billingTouched.razonSocial ? billingErrors.razonSocial : undefined}
+                        />
+                        <Field
+                          label="Giro" value={billing.giro} placeholder="Ej: Venta de artículos deportivos" autoComplete="off"
+                          onChange={(v) => setBilling({ ...billing, giro: v })}
+                          onBlur={() => markBillingTouched('giro')}
+                          error={billingTouched.giro ? billingErrors.giro : undefined}
+                        />
+                        <Field
+                          label="Dirección de facturación" value={billing.direccion} placeholder="Av. Providencia 1234" autoComplete="off"
+                          onChange={(v) => setBilling({ ...billing, direccion: v })}
+                          onBlur={() => markBillingTouched('direccion')}
+                          error={billingTouched.direccion ? billingErrors.direccion : undefined}
+                        />
+                        <Field
+                          label="Comuna" value={billing.comuna} placeholder="Providencia" autoComplete="off"
+                          onChange={(v) => setBilling({ ...billing, comuna: v })}
+                          onBlur={() => markBillingTouched('comuna')}
+                          error={billingTouched.comuna ? billingErrors.comuna : undefined}
+                        />
+                        <p className="text-[11px] text-neutral-500">
+                          Te enviaremos la factura al correo de contacto de arriba.
+                        </p>
+                      </div>
+                    )}
 
                     {checkoutError && <p className="text-rose-400 text-xs">{checkoutError}</p>}
 

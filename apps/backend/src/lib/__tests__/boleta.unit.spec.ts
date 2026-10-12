@@ -7,6 +7,9 @@ const emisor = {
   giro: "Desarrollo de software",
   dirOrigen: "Calle 7 numero 3",
   comunaOrigen: "Santiago",
+  acteco: [620200],
+  telefono: "912345678",
+  correoEmisor: "ventas@kinetic.cl",
 }
 
 describe("buildBoletaPayload", () => {
@@ -17,6 +20,7 @@ describe("buildBoletaPayload", () => {
         shipping_total: 3990,
       },
       emisor,
+      {},
       "2026-10-12"
     )
     const doc = (payload as any).Documento

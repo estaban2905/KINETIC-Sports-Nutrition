@@ -18,6 +18,10 @@ export type SimpleFacturaConfig = {
   giro: string
   dirOrigen: string
   comunaOrigen: string
+  /** Códigos de actividad económica (Acteco) registrados en el SII; la factura los exige. */
+  acteco: number[]
+  telefono: string
+  correoEmisor: string
   /** Branch name as shown in SimpleFactura; spaces become "_" in the URL. */
   sucursal: string
   /** 0 = certificación (no tax validity), 1 = producción. */
@@ -39,6 +43,13 @@ export function getSimpleFacturaConfig(env: NodeJS.ProcessEnv = process.env): Si
     giro: env.SIMPLEFACTURA_GIRO?.trim() || "",
     dirOrigen: env.SIMPLEFACTURA_DIR_ORIGEN?.trim() || "",
     comunaOrigen: env.SIMPLEFACTURA_COMUNA_ORIGEN?.trim() || "",
+    acteco: (env.SIMPLEFACTURA_ACTECO ?? "")
+      .split(",")
+      .map((code) => Number(code.trim()))
+      .filter((code) => Number.isInteger(code) && code > 0)
+      .slice(0, 4),
+    telefono: env.SIMPLEFACTURA_TELEFONO?.trim() || "",
+    correoEmisor: env.SIMPLEFACTURA_CORREO_EMISOR?.trim() || "",
     sucursal: env.SIMPLEFACTURA_SUCURSAL?.trim() || "Casa Matriz",
     ambiente: env.SIMPLEFACTURA_AMBIENTE?.trim() === "1" ? 1 : 0,
   }
@@ -51,7 +62,7 @@ type SimpleFacturaResponse<T> = {
   errors?: string[] | null
 }
 
-export type BoletaEmitida = {
+export type DteEmitido = {
   tipoDTE: number
   rutEmisor: string
   rutReceptor: string
@@ -120,23 +131,35 @@ export class SimpleFacturaClient {
     }
   }
 
-  /** `payload` is the invoiceV2 body (see lib/boleta.ts). Throws if SimpleFactura rejects it. */
-  async emitirBoleta(payload: unknown): Promise<BoletaEmitida> {
+  /**
+   * `payload` is the invoiceV2 body (see lib/boleta.ts and lib/factura.ts). Throws if
+   * SimpleFactura rejects it. validaMontos makes SimpleFactura check that the totals add
+   * up before emitting, but it is not supported together with MntBruto (facturas).
+   */
+  async emitirDte(payload: unknown, options: { validaMontos?: boolean } = {}): Promise<DteEmitido> {
+    const { validaMontos = true } = options
     const branch = encodeURIComponent(this.config.sucursal.trim().replace(/\s+/g, "_"))
-    // validaMontos makes SimpleFactura check that the totals add up before emitting.
-    const response = await this.request(`/invoiceV2/${branch}/validaMontos`, { method: "POST", body: payload })
-    const body = (await response.json().catch(() => ({}))) as SimpleFacturaResponse<BoletaEmitida>
+    const response = await this.request(`/invoiceV2/${branch}${validaMontos ? "/validaMontos" : ""}`, {
+      method: "POST",
+      body: payload,
+    })
+    const body = (await response.json().catch(() => ({}))) as SimpleFacturaResponse<DteEmitido>
     if (!response.ok || body.status !== 200 || !body.data?.folio) {
       const detail = [body.message, ...(body.errors ?? [])].filter(Boolean).join(" | ")
       throw new SimpleFacturaError(
-        `SimpleFactura no emitió la boleta (HTTP ${response.status}): ${detail || "sin detalle"}`,
+        `SimpleFactura no emitió el documento (HTTP ${response.status}): ${detail || "sin detalle"}`,
         response.status
       )
     }
     return body.data
   }
 
-  /** PDF of an issued DTE (39 = boleta electrónica). tipoPapel 3 = carta. */
+  /** Kept for callers that only emit boletas. */
+  emitirBoleta(payload: unknown): Promise<DteEmitido> {
+    return this.emitirDte(payload)
+  }
+
+  /** PDF of an issued DTE (39 = boleta, 33 = factura). tipoPapel 3 = carta. */
   async obtenerPdf(folio: number, codigoTipoDte = 39): Promise<Buffer> {
     const response = await this.request("/dte/pdf", {
       method: "POST",

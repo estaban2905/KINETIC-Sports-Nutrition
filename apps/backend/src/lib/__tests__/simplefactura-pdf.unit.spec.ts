@@ -9,6 +9,9 @@ const config = {
   giro: "X",
   dirOrigen: "X",
   comunaOrigen: "X",
+  acteco: [],
+  telefono: "",
+  correoEmisor: "",
   sucursal: "Casa Matriz",
   ambiente: 0 as const,
 }

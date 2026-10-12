@@ -203,24 +203,26 @@ export function shipmentEmail(args: {
   return { subject: `Tu pedido #${args.displayId} fue enviado — KINETIC Sports Nutrition`, html }
 }
 
-export function boletaEmail(args: {
+export function documentoEmail(args: {
+  tipo: "boleta" | "factura"
   displayId: number
   folio: number
   ambiente: 0 | 1
 }): { subject: string; html: string } {
+  const label = args.tipo === "factura" ? "factura" : "boleta"
   const html = emailLayout(
     `
-    ${heading("Tu boleta electrónica")}
-    ${paragraph(`Adjuntamos la boleta electrónica N° ${strong(String(args.folio))} de tu pedido ${strong(`#${args.displayId}`)}.`)}
+    ${heading(`Tu ${label} electrónica`)}
+    ${paragraph(`Adjuntamos la ${label} electrónica N° ${strong(String(args.folio))} de tu pedido ${strong(`#${args.displayId}`)}.`)}
     ${
       args.ambiente === 0
         ? paragraph(`<span style="color:${MUTED};">Documento emitido en ambiente de certificación: no tiene validez tributaria.</span>`)
         : ""
     }
     ${trackButton()}`,
-    { preheader: `Boleta N° ${args.folio} de tu pedido #${args.displayId}` }
+    { preheader: `${label[0].toUpperCase()}${label.slice(1)} N° ${args.folio} de tu pedido #${args.displayId}` }
   )
-  return { subject: `Tu boleta del pedido #${args.displayId} — KINETIC Sports Nutrition`, html }
+  return { subject: `Tu ${label} del pedido #${args.displayId} — KINETIC Sports Nutrition`, html }
 }
 
 export function deliveryEmail(args: {

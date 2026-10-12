@@ -1,6 +1,6 @@
 import type { MedusaContainer } from "@medusajs/framework"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { issueBoletaForOrder } from "../lib/invoice-order"
+import { isDocumentPending, issueDocumentForOrder } from "../lib/invoice-order"
 import { getSimpleFacturaConfig } from "../lib/simplefactura"
 import { Sentry } from "../lib/sentry"
 
@@ -10,9 +10,9 @@ const MAX_PER_RUN = 20
 const PAUSE_MS = 700
 
 /**
- * Safety net for boletas: emits those that failed at order time (SimpleFactura
+ * Safety net for boletas and facturas: emits those that failed at order time (SimpleFactura
  * down, out of folios, rate limited...) and re-sends the PDF email when it
- * failed. issueBoletaForOrder is idempotent, so running it on every recent
+ * failed. issueDocumentForOrder is idempotent, so running it on every recent
  * order is safe.
  */
 export default async function retryBoletas(container: MedusaContainer) {
@@ -31,14 +31,14 @@ export default async function retryBoletas(container: MedusaContainer) {
   })
 
   const pending = (orders as any[])
-    .filter((o) => !o.metadata?.boleta?.folio || !o.metadata.boleta.emailed)
+    .filter((o) => isDocumentPending(o.metadata))
     .slice(0, MAX_PER_RUN)
   if (!pending.length) return
 
   logger.info(`[retry-boletas] ${pending.length} orden(es) con boleta pendiente.`)
   for (const order of pending) {
     try {
-      await issueBoletaForOrder(container, order.id)
+      await issueDocumentForOrder(container, order.id)
     } catch (err) {
       logger.error(`[retry-boletas] Orden #${order.display_id}: ${err instanceof Error ? err.message : err}`)
       Sentry.captureException(err, { extra: { orderId: order.id } })
