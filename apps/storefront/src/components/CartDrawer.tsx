@@ -99,6 +99,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const [shippingOptions, setShippingOptions] = useState<CartShippingOption[]>([]);
   const [selectedShippingOption, setSelectedShippingOption] = useState<string | null>(null);
   const [paymentProviders, setPaymentProviders] = useState<HttpTypes.StorePaymentProvider[]>([]);
+  const [providersStatus, setProvidersStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [providersAttempt, setProvidersAttempt] = useState(0);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,10 +132,23 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (step !== 'payment') return;
+    let cancelled = false;
+    setProvidersStatus('loading');
     listPaymentProviders()
-      .then((providers) => setPaymentProviders(providers.filter((p) => isAllowedPaymentProvider(p.id))))
-      .catch(() => setPaymentProviders([]));
-  }, [step, listPaymentProviders]);
+      .then((providers) => {
+        if (cancelled) return;
+        setPaymentProviders(providers.filter((p) => isAllowedPaymentProvider(p.id)));
+        setProvidersStatus('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPaymentProviders([]);
+        setProvidersStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [step, listPaymentProviders, providersAttempt]);
 
   // Stripe requires collecting the card client-side (PCI compliance) before
   // authorizePayment on the backend can confirm the PaymentIntent.
@@ -616,8 +631,23 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
                 {step === 'payment' && (
                   <div className="space-y-3">
-                    {paymentProviders.length === 0 ? (
+                    {providersStatus === 'loading' ? (
                       <p className="text-neutral-500 text-xs">Cargando métodos de pago...</p>
+                    ) : providersStatus === 'error' || paymentProviders.length === 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-rose-400 text-xs">
+                          {providersStatus === 'error'
+                            ? 'No pudimos cargar los métodos de pago.'
+                            : 'No hay métodos de pago disponibles por ahora.'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setProvidersAttempt((n) => n + 1)}
+                          className="text-lime-400 text-xs underline"
+                        >
+                          Reintentar
+                        </button>
+                      </div>
                     ) : (
                       paymentProviders.map((provider) => (
                         <button
