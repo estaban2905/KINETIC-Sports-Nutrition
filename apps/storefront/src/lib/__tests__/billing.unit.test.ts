@@ -58,3 +58,10 @@ describe('billing form', () => {
     expect(billingFromCart(undefined)).toEqual(EMPTY_BILLING);
   });
 });
+
+describe('RUT examples shown to the customer', () => {
+  it('uses an example RUT that is itself valid', () => {
+    expect(isValidRut('76.123.456-0')).toBe(true);
+    expect(isValidRut('76.123.456-7')).toBe(false);
+  });
+});

@@ -182,7 +182,7 @@ export function formatRut(value: string): string {
 export function validateBillingForm(values: BillingFormValues): BillingFormErrors {
   if (values.tipo !== "factura") return {};
   const errors: BillingFormErrors = {};
-  if (!isValidRut(values.rut)) errors.rut = "Ingresa un RUT válido (ej: 76.123.456-7).";
+  if (!isValidRut(values.rut)) errors.rut = "Ingresa un RUT válido (ej: 76.123.456-0).";
   if (!values.razonSocial.trim()) errors.razonSocial = "Ingresa la razón social.";
   if (!values.giro.trim()) errors.giro = "Ingresa el giro de la empresa.";
   if (!values.direccion.trim()) errors.direccion = "Ingresa la dirección de facturación.";

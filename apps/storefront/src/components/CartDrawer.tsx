@@ -596,7 +596,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
                     {billing.tipo === 'factura' && (
                       <div className="space-y-3 p-3 rounded-xl border border-neutral-800 bg-neutral-900/40">
                         <Field
-                          label="RUT de la empresa" value={billing.rut} placeholder="76.123.456-7" autoComplete="off"
+                          label="RUT de la empresa" value={billing.rut} placeholder="76.123.456-0" autoComplete="off"
                           onChange={(v) => setBilling({ ...billing, rut: formatRut(v) })}
                           onBlur={() => markBillingTouched('rut')}
                           error={billingTouched.rut ? billingErrors.rut : undefined}
