@@ -142,8 +142,9 @@ export class SimpleFacturaClient {
       method: "POST",
       body: {
         credenciales: { rutEmisor: this.config.rutEmisor, nombreSucursal: this.config.sucursal },
-        dteReferenciadoExterno: { folio, codigoTipoDte, ambiente: this.config.ambiente },
-        tipoPapel: 3,
+        // tipoPapel only takes effect inside dteReferenciadoExterno (outside it is ignored
+        // and the portal's 80mm ticket template is used).
+        dteReferenciadoExterno: { folio, codigoTipoDte, ambiente: this.config.ambiente, tipoPapel: 3 },
       },
     })
     if (!response.ok) {
