@@ -104,6 +104,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
+  const payLock = useRef(false);
   const stripeCardContainerRef = useRef<HTMLDivElement>(null);
   const stripeRef = useRef<Stripe | null>(null);
   const stripeCardRef = useRef<StripeCardElement | null>(null);
@@ -250,7 +251,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   };
 
   const handlePay = async () => {
-    if (!selectedProvider) return;
+    // Synchronous lock: a second click can land before React re-renders the
+    // button as disabled, which would open a second payment session.
+    if (!selectedProvider || payLock.current) return;
+    payLock.current = true;
+    let redirecting = false;
     setIsSubmitting(true);
     setCheckoutError(null);
     try {
@@ -265,6 +270,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
       // esto y se completa directo.
       const redirectUrl = sessionData?.init_point ?? sessionData?.url;
       if (typeof redirectUrl === 'string') {
+        // Stay locked while the browser leaves for the provider's page.
+        redirecting = true;
         window.location.href = redirectUrl;
         return;
       }
@@ -300,7 +307,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
       Sentry.captureException(err);
       setCheckoutError(err instanceof Error ? err.message : 'No pudimos procesar el pago.');
     } finally {
-      setIsSubmitting(false);
+      if (!redirecting) {
+        payLock.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 

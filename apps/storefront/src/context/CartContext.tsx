@@ -9,7 +9,7 @@ import { HttpTypes } from "@medusajs/types";
 import { medusa, getChileRegion, resolveVariantId } from "../lib/medusa";
 import { Product, ProductFlavor, ProductSize } from "../types";
 
-const CART_ID_KEY = "kinetic_cart_id";
+export const CART_ID_KEY = "kinetic_cart_id";
 
 /**
  * `fetch` throws a generic "Failed to fetch" (or similar) when the backend
