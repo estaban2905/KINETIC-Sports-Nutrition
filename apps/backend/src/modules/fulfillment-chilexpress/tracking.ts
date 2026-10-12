@@ -4,11 +4,26 @@
 
 import type { EnviosOptions } from "./transport-order"
 
+export type TrackingEvent = {
+  /** ISO date-time of the event, as reported by Chilexpress. */
+  at: string | null
+  /** Human-readable event ("Pieza en ruta"). */
+  description: string
+}
+
 export type TrackingResult = {
   delivered: boolean
   /** Chilexpress's own current status text (e.g. "DESCARGADA"), for logs. */
   status: string | null
   deliveredAt: string | null
+  /** Every event Chilexpress registered, newest first. */
+  events: TrackingEvent[]
+}
+
+// Chilexpress sends event names in ALL CAPS ("PIEZA EN RUTA").
+function formatEventDescription(text: string): string {
+  const lower = text.trim().toLowerCase()
+  return lower.charAt(0).toUpperCase() + lower.slice(1)
 }
 
 type TrackingResponse = {
@@ -40,10 +55,19 @@ export function parseTracking(body: TrackingResponse | null): TrackingResult {
   )
   const deliveredAt = deliveryEvent?.eventDateTime ?? data?.deliveryData?.deliveryDateTime ?? null
 
+  const events = (data?.trackingEvents ?? [])
+    .map((e) => ({
+      at: e.eventDateTime ?? null,
+      description: formatEventDescription(e.description || e.code?.clientEventDescription || ""),
+    }))
+    .filter((e) => e.description)
+    .sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""))
+
   return {
     delivered: Boolean(deliveryEvent || data?.deliveryData?.deliveryDateTime),
     status: data?.transportOrderData?.status ?? null,
     deliveredAt,
+    events,
   }
 }
 

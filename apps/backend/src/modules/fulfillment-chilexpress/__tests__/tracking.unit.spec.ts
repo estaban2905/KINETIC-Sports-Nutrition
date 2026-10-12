@@ -18,11 +18,29 @@ describe("parseTracking", () => {
       },
     })
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       delivered: true,
       status: "DESCARGADA",
       deliveredAt: "2018-10-29T16:06:00Z",
     })
+  })
+
+  it("returns every event newest first with readable text", () => {
+    const result = parseTracking({
+      data: {
+        trackingEvents: [
+          { description: "RECEPCIONADO", eventDateTime: "2018-10-26T18:42:00Z" },
+          { description: "PIEZA EN RUTA", eventDateTime: "2018-10-29T09:05:00Z" },
+          { description: "PIEZA EN TRANSITO AL DESTINO", eventDateTime: "2018-10-26T19:12:00Z" },
+        ],
+      },
+    })
+
+    expect(result.events).toEqual([
+      { at: "2018-10-29T09:05:00Z", description: "Pieza en ruta" },
+      { at: "2018-10-26T19:12:00Z", description: "Pieza en transito al destino" },
+      { at: "2018-10-26T18:42:00Z", description: "Recepcionado" },
+    ])
   })
 
   it("is not delivered while the package is still moving", () => {

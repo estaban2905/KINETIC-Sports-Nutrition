@@ -1,5 +1,5 @@
 import type { MedusaContainer } from "@medusajs/framework"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { markOrderFulfillmentAsDeliveredWorkflow } from "@medusajs/medusa/core-flows"
 import { fetchTracking } from "../modules/fulfillment-chilexpress/tracking"
 import { Sentry } from "../lib/sentry"
@@ -22,6 +22,7 @@ export default async function syncChilexpressTracking(container: MedusaContainer
 
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
+  const fulfillmentModule = container.resolve(Modules.FULFILLMENT)
   const options = {
     apiKey,
     rut,
@@ -50,7 +51,20 @@ export default async function syncChilexpressTracking(container: MedusaContainer
         transportOrderNumber: fulfillment.data.transport_order_number,
         reference: String(fulfillment.data.reference ?? ""),
       })
-      if (!tracking?.delivered) continue
+      if (!tracking) continue
+
+      // Keep the customer-facing timeline current. Only written when
+      // Chilexpress reported something new, so quiet runs touch nothing.
+      const known = Array.isArray(fulfillment.data.tracking_events)
+        ? fulfillment.data.tracking_events.length
+        : 0
+      if (tracking.events.length !== known) {
+        await fulfillmentModule.updateFulfillment(fulfillment.id, {
+          data: { ...fulfillment.data, tracking_events: tracking.events },
+        })
+      }
+
+      if (!tracking.delivered) continue
 
       const { data: links } = await query.graph({
         entity: "order_fulfillment",

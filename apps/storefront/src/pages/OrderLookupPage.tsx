@@ -9,6 +9,12 @@ const currencyFormatter = new Intl.NumberFormat('es-CL', {
   maximumFractionDigits: 0,
 });
 
+function formatEventDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString('es-CL', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pendiente',
   completed: 'Completado',
@@ -19,6 +25,8 @@ const STATUS_LABELS: Record<string, string> = {
   shipped: 'Enviado',
   delivered: 'Entregado',
   not_paid: 'Pago pendiente',
+  awaiting: 'Confirmando pago',
+  authorized: 'Pago autorizado',
   captured: 'Pago confirmado',
 };
 
@@ -45,6 +53,10 @@ export function OrderLookupPage() {
   };
 
   const trackingLabels = order?.fulfillments.flatMap((f) => f.labels ?? []) ?? [];
+  // Newest first, as sent by the backend; merged across fulfillments.
+  const trackingEvents = (order?.fulfillments.flatMap((f) => f.tracking_events ?? []) ?? []).sort(
+    (a, b) => (b.at ?? '').localeCompare(a.at ?? '')
+  );
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 px-6 py-16">
@@ -131,6 +143,27 @@ export function OrderLookupPage() {
             ) : (
               <div className="border-t border-neutral-800 pt-4 flex items-center gap-2 text-neutral-500 text-sm">
                 <Clock className="w-4 h-4" /> Aún no hay número de seguimiento asignado.
+              </div>
+            )}
+
+            {trackingEvents.length > 0 && (
+              <div className="border-t border-neutral-800 pt-4 space-y-3">
+                <p className="text-sm text-neutral-300">Historial del envío</p>
+                <ol className="space-y-3">
+                  {trackingEvents.map((event, i) => (
+                    <li key={i} className="flex gap-3 text-sm">
+                      <span
+                        className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${i === 0 ? 'bg-lime-400' : 'bg-neutral-600'}`}
+                      />
+                      <div>
+                        <p className={i === 0 ? 'text-neutral-100' : 'text-neutral-400'}>{event.description}</p>
+                        {event.at && (
+                          <p className="text-neutral-500 text-xs">{formatEventDate(event.at)}</p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
 
