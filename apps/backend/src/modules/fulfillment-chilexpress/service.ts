@@ -1,4 +1,4 @@
-import { AbstractFulfillmentProviderService } from "@medusajs/framework/utils"
+import { AbstractFulfillmentProviderService, MedusaError } from "@medusajs/framework/utils"
 import type {
   CalculatedShippingOptionPrice,
   CalculateShippingOptionPriceContext,
@@ -178,6 +178,25 @@ class ChilexpressFulfillmentProviderService extends AbstractFulfillmentProviderS
    * of a "fulfilled" order with no shipment.
    */
   async createFulfillment(
+    data: Record<string, unknown>,
+    items: Partial<Omit<FulfillmentItemDTO, "fulfillment">>[],
+    order: Partial<FulfillmentOrderDTO> | undefined,
+    fulfillment: Partial<Omit<FulfillmentDTO, "provider_id" | "data" | "items">>
+  ): Promise<CreateFulfillmentResult> {
+    try {
+      return await this.createTransportOrderFulfillment(data, items, order, fulfillment)
+    } catch (error) {
+      // Medusa's HTTP error handler hides the message of anything that isn't
+      // a MedusaError behind a generic "unknown_error" — which left the admin
+      // (and us) blind to why Chilexpress rejected the order.
+      const message = error instanceof Error ? error.message : String(error)
+      console.error(`[chilexpress] createFulfillment falló: ${message}`)
+      if (error instanceof MedusaError) throw error
+      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, message)
+    }
+  }
+
+  protected async createTransportOrderFulfillment(
     _data: Record<string, unknown>,
     items: Partial<Omit<FulfillmentItemDTO, "fulfillment">>[],
     order: Partial<FulfillmentOrderDTO> | undefined,
