@@ -17,6 +17,15 @@ export const CART_ID_KEY = "kinetic_cart_id";
  * useless to a shopper, so it's replaced with an actionable one instead of
  * being shown as-is.
  */
+/** True when the cart already carries this promo code (case-insensitive). */
+export function isPromotionApplied(
+  promotions: { code?: string | null }[] | undefined,
+  code: string
+): boolean {
+  const wanted = code.trim().toLowerCase();
+  return (promotions ?? []).some((p) => p.code?.toLowerCase() === wanted);
+}
+
 export function describeCartError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err);
   if (/failed to fetch|networkerror|load failed|ECONNREFUSED/i.test(message)) {
@@ -183,6 +192,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addPromotionCode = useCallback(
     async (code: string) => {
       if (!cart) return { success: false, message: "No hay un carrito activo." };
+      if (isPromotionApplied(cart.promotions, code)) {
+        return { success: true, message: "Este cupón ya está aplicado." };
+      }
       const before = cart.promotions?.length ?? 0;
       try {
         const { cart: updated } = await medusa.store.cart.addPromotions(cart.id, {

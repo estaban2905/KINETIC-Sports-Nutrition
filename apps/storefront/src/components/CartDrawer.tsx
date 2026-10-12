@@ -118,6 +118,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const payLock = useRef(false);
+
+  // Keyboard/screen-reader users lose their place when the step's content is
+  // swapped out: move focus to the new step's title (not on first render).
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const previousStep = useRef(step);
+  useEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    titleRef.current?.focus();
+  }, [step]);
   const stripeCardContainerRef = useRef<HTMLDivElement>(null);
   const stripeRef = useRef<Stripe | null>(null);
   const stripeCardRef = useRef<StripeCardElement | null>(null);
@@ -399,7 +409,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
                     <ShoppingBag className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 id="cart-drawer-title" className="font-bold text-lg uppercase font-display tracking-wide text-white">
+                    <h3 ref={titleRef} tabIndex={-1} id="cart-drawer-title" className="font-bold text-lg uppercase font-display tracking-wide text-white focus:outline-none">
                       {stepTitle[step]}
                     </h3>
                     {step === 'cart' && (
