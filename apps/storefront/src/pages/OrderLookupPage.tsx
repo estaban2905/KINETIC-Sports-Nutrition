@@ -65,8 +65,6 @@ export function OrderLookupPage() {
       ? order.fulfillments.find((f) => f.tracking_certificate_url)?.tracking_certificate_url
       : null;
   const trackingLabels = order?.fulfillments.flatMap((f) => f.labels ?? []) ?? [];
-  // Chilexpress's own status ("En pre-recepcion"); known before any event exists.
-  const shipmentStatus = order?.fulfillments.find((f) => f.tracking_status)?.tracking_status;
   // Newest first, as sent by the backend; merged across fulfillments.
   const trackingEvents = (order?.fulfillments.flatMap((f) => f.tracking_events ?? []) ?? []).sort(
     (a, b) => (b.at ?? '').localeCompare(a.at ?? '')
@@ -206,13 +204,6 @@ export function OrderLookupPage() {
             ) : (
               <div className="border-t border-neutral-800 pt-4 flex items-center gap-2 text-neutral-500 text-sm">
                 <Clock className="w-4 h-4" /> Aún no hay número de seguimiento asignado.
-              </div>
-            )}
-
-            {shipmentStatus && (
-              <div className="flex items-center justify-between border-t border-neutral-800 pt-4">
-                <span className="text-neutral-400 text-sm">Estado del envío</span>
-                <span className="text-lime-400">{shipmentStatus}</span>
               </div>
             )}
 
