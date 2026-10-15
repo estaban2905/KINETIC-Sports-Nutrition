@@ -161,6 +161,24 @@ module.exports = defineConfig({
       resolve: "./src/modules/product-content",
     },
     {
+      resolve: "./src/modules/invoicing",
+    },
+    {
+      // Candados compartidos vía PostgreSQL (sin necesitar Redis): evitan que dos
+      // procesos o instancias hagan a la vez algo que no se puede repetir, como
+      // emitir una boleta (ver lib/order-lock.ts).
+      resolve: "@medusajs/medusa/locking",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/medusa/locking-postgres",
+            id: "locking-postgres",
+            is_default: true,
+          },
+        ],
+      },
+    },
+    {
       resolve: "@medusajs/medusa/auth",
       dependencies: [Modules.CACHE, ContainerRegistrationKeys.LOGGER],
       options: {

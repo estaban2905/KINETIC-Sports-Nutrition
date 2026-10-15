@@ -1,6 +1,7 @@
 import type { MedusaContainer } from "@medusajs/framework"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { orderPaymentPendingEmail, orderPlacedEmail } from "./email-templates"
+import { withLock } from "./order-lock"
 import { derivePaymentStatus, isOrderPaid } from "./order-status"
 
 /** Marcas en order.metadata para no repetir el mismo correo si llegan varios eventos. */
@@ -56,6 +57,12 @@ const EMAIL_ORDER_FIELDS = [
  * en metadata evitan duplicados. Lanza si falla el envío (el que llama lo reporta).
  */
 export async function sendOrderStatusEmail(container: MedusaContainer, orderId: string): Promise<OrderEmailKind> {
+  // Misma clave que la boleta: los dos reescriben order.metadata, así que no pueden correr a la vez
+  // (y dos eventos casi simultáneos no deben mandar el correo dos veces).
+  return withLock(container, `order-docs:${orderId}`, () => sendOrderStatusEmailUnlocked(container, orderId))
+}
+
+async function sendOrderStatusEmailUnlocked(container: MedusaContainer, orderId: string): Promise<OrderEmailKind> {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
 

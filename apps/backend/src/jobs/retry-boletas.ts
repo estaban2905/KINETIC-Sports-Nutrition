@@ -54,7 +54,10 @@ export default async function retryBoletas(container: MedusaContainer) {
       await sendOrderStatusEmail(container, order.id).catch((err) =>
         logger.error(`[retry-boletas] Orden #${order.display_id}: email de confirmación: ${err instanceof Error ? err.message : err}`)
       )
-      await issueDocumentForOrder(container, order.id)
+      const result = await issueDocumentForOrder(container, order.id)
+      if (result === "needs_review") {
+        logger.warn(`[retry-boletas] Orden #${order.display_id}: reserva de documento sin resolver (revisión manual).`)
+      }
     } catch (err) {
       logger.error(`[retry-boletas] Orden #${order.display_id}: ${err instanceof Error ? err.message : err}`)
       Sentry.captureException(err, { extra: { orderId: order.id } })
