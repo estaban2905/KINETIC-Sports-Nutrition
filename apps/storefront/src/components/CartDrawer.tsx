@@ -9,12 +9,14 @@ import {
 import { HttpTypes } from '@medusajs/types';
 import type { Stripe, StripeCardElement } from '@stripe/stripe-js';
 import { useCart, type CartShippingOption } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { getStripe } from '../lib/stripe';
 import { listComunas } from '../lib/medusa';
 import {
-  billingFromCart, billingToMetadata, contactFromCart, formatRut, validateBillingForm, validateContactForm,
+  billingFromCart, billingToMetadata, contactFromCart, contactFromCustomer, formatRut, validateBillingForm, validateContactForm,
   type BillingFormValues, type ContactFormValues,
 } from '../lib/checkoutValidation';
+import { billingFromCustomer } from '../lib/accountData';
 import { ComunaAutocomplete } from './ComunaAutocomplete';
 
 interface CartDrawerProps {
@@ -85,6 +87,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
     completeCart,
   } = useCart();
   const navigate = useNavigate();
+  const { user, addresses: customerAddresses } = useAuth();
 
   const [step, setStep] = useState<CheckoutStep>(startAtCheckout && (cart?.items?.length ?? 0) > 0 ? 'address' : 'cart');
   const [couponCode, setCouponCode] = useState('');
@@ -95,13 +98,36 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
   const [contact, setContact] = useState<ContactFormValues>(() =>
     contactFromCart(cart?.email, cart?.shipping_address)
   );
-  const contactPrefilled = useRef(!!cart?.shipping_address);
+  // Medusa crea el carrito con un shipping_address casi vacío (solo el país):
+  // cuenta como "ya tiene dirección" únicamente si trae calle o nombre.
+  const cartHasAddress = (a: { address_1?: string | null; first_name?: string | null } | null | undefined) => !!(a?.address_1 || a?.first_name);
+  const contactPrefilled = useRef(cartHasAddress(cart?.shipping_address));
   useEffect(() => {
     // The cart can arrive after the drawer mounts (page just loaded).
-    if (contactPrefilled.current || !cart?.shipping_address) return;
+    if (contactPrefilled.current || !cart || !cartHasAddress(cart.shipping_address)) return;
     contactPrefilled.current = true;
     setContact(contactFromCart(cart.email, cart.shipping_address));
   }, [cart?.email, cart?.shipping_address]);
+
+  // Cliente con sesión y carrito sin dirección todavía: se precarga con sus
+  // datos y su dirección guardada. Lo que ya está en el carrito tiene prioridad.
+  const customerPrefilled = useRef(false);
+  useEffect(() => {
+    if (customerPrefilled.current || contactPrefilled.current || !user) return;
+    // Las direcciones llegan después que el perfil: se vuelve a correr cuando
+    // aparecen, salvo que el formulario ya tenga calle (la escribió el cliente).
+    customerPrefilled.current = customerAddresses.length > 0;
+    setContact((prev) =>
+      prev.street
+        ? prev
+        : contactFromCustomer({
+            email: user.email,
+            first_name: user.name,
+            phone: user.phone,
+            addresses: customerAddresses,
+          })
+    );
+  }, [user, customerAddresses]);
   const [touched, setTouched] = useState<Partial<Record<keyof ContactFormValues, boolean>>>({});
   const [comunas, setComunas] = useState<string[]>([]);
   const contactErrors = validateContactForm(contact, comunas);
@@ -113,6 +139,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
   const [billingTouched, setBillingTouched] = useState<Partial<Record<keyof BillingFormValues, boolean>>>({});
   const billingErrors = validateBillingForm(billing);
   const markBillingTouched = (field: keyof BillingFormValues) => setBillingTouched((t) => ({ ...t, [field]: true }));
+
+  // Datos de factura de una compra anterior: se precargan los campos, pero el
+  // documento sigue siendo boleta hasta que el cliente elija factura.
+  const billingPrefilled = useRef(false);
+  useEffect(() => {
+    if (billingPrefilled.current || !user?.billing) return;
+    billingPrefilled.current = true;
+    setBilling((prev) => (prev.rut || prev.razonSocial ? prev : { ...billingFromCustomer(user.billing), tipo: prev.tipo }));
+  }, [user?.billing]);
 
   useEffect(() => {
     listComunas().then(setComunas);

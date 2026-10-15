@@ -3,11 +3,13 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { HttpTypes } from "@medusajs/types";
 import { medusa, getChileRegion, resolveVariantId } from "../lib/medusa";
 import { Product, ProductFlavor, ProductSize } from "../types";
+import { useAuth } from "./AuthContext";
 
 export const CART_ID_KEY = "kinetic_cart_id";
 
@@ -75,6 +77,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<HttpTypes.StoreCart | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user, rememberCheckoutData } = useAuth();
 
   useEffect(() => {
     const cartId = localStorage.getItem(CART_ID_KEY);
@@ -88,6 +91,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(CART_ID_KEY);
       });
   }, []);
+
+  // Al iniciar sesión el carrito del invitado pasa a ser del cliente. Sin esto
+  // el pedido saldría como de invitado y no aparecería en "Mis pedidos".
+  const customerId = user?.id;
+  useEffect(() => {
+    if (!customerId || !cart || cart.customer_id === customerId) return;
+    medusa.store.cart
+      .transferCart(cart.id)
+      .then(({ cart: transferred }) => setCart(transferred))
+      .catch(() => {
+        // No bloquea la compra: el carrito sigue funcionando como invitado.
+      });
+  }, [customerId, cart?.id, cart?.customer_id]);
 
   const ensureCart = useCallback(async (): Promise<HttpTypes.StoreCart> => {
     if (cart) return cart;
@@ -282,17 +298,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (!cart) throw new Error("No hay un carrito activo.");
     const result = await medusa.store.cart.complete(cart.id);
     if (result.type === "order") {
+      // Con cuenta, lo que el cliente escribió en esta compra queda guardado
+      // para precargarlo la próxima vez (sin esperar: no debe demorar la confirmación).
+      void rememberCheckoutData({
+        address: cart.shipping_address,
+        phone: cart.shipping_address?.phone,
+        billing: (cart.metadata?.billing as Record<string, string> | undefined) ?? null,
+      });
       localStorage.removeItem(CART_ID_KEY);
       setCart(null);
     }
     return result;
-  }, [cart]);
+  }, [cart, rememberCheckoutData]);
 
   const resetCart = useCallback(() => {
     localStorage.removeItem(CART_ID_KEY);
     setCart(null);
     setError(null);
   }, []);
+
+  // Al cerrar sesión se descarta el carrito: pertenece al cliente y no debe
+  // quedar a disposición de quien use el mismo navegador después.
+  const hadCustomer = useRef(false);
+  useEffect(() => {
+    if (customerId) {
+      hadCustomer.current = true;
+    } else if (hadCustomer.current) {
+      hadCustomer.current = false;
+      resetCart();
+    }
+  }, [customerId, resetCart]);
 
   const itemCount =
     cart?.items?.reduce((acc, item) => acc + item.quantity, 0) ?? 0;

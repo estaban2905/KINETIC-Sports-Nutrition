@@ -125,6 +125,38 @@ export function contactFromCart(
   };
 }
 
+type CustomerLike = {
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
+  addresses?: (CartAddressLike & { is_default_shipping?: boolean | null })[] | null;
+};
+
+/**
+ * Precarga el formulario con los datos del cliente con sesión: su dirección
+ * de envío predeterminada (o la primera guardada) y, si ésta no trae nombre o
+ * teléfono, los de su perfil. El carrito manda sobre esto (ver CartDrawer).
+ */
+export function contactFromCustomer(customer: CustomerLike | null | undefined): ContactFormValues {
+  if (!customer) return contactFromCart(undefined, undefined);
+
+  const addresses = customer.addresses ?? [];
+  const address = addresses.find((a) => a.is_default_shipping) ?? addresses[0];
+  const fromAddress = contactFromCart(customer.email, address);
+
+  const profileName = [customer.first_name, customer.last_name]
+    .map((part) => (part ?? "").trim())
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    ...fromAddress,
+    name: fromAddress.name || profileName,
+    phone: fromAddress.phone || (customer.phone ?? ""),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Boleta / factura
 // ---------------------------------------------------------------------------

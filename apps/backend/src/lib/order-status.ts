@@ -113,3 +113,13 @@ export function deriveFulfillmentStatus(fulfillments: Fulfillment[] | undefined)
   if (active.every((f) => f.shipped_at || f.delivered_at)) return "shipped"
   return "fulfilled"
 }
+
+/**
+ * Un pedido está pagado cuando el pago se capturó o se autorizó (Webpay y
+ * Mercado Pago quedan "autorizados" al aprobarse). Una transferencia pendiente
+ * (Khipu) o un pago "en proceso" siguen como "awaiting" hasta que se acrediten.
+ */
+export function isOrderPaid(collections: PaymentCollection[] | undefined): boolean {
+  const status = derivePaymentStatus(collections)
+  return status === "captured" || status === "authorized"
+}

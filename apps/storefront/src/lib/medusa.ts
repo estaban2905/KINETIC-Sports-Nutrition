@@ -6,6 +6,9 @@ import type { CustomerStatus } from "./orderStatus";
 export const medusa = new Medusa({
   baseUrl: import.meta.env.VITE_MEDUSA_BACKEND_URL || "http://localhost:9000",
   publishableKey: import.meta.env.VITE_MEDUSA_PUBLISHABLE_KEY,
+  // JWT y no cookie de sesión: storefront y backend viven en dominios distintos
+  // (Railway) y la cookie cruzada la bloquea SameSite.
+  auth: { type: "jwt" },
 });
 
 let cachedChileRegion: HttpTypes.StoreRegion | null = null;

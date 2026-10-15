@@ -3,6 +3,7 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { buildBoletaPayload } from "./boleta"
 import { documentoEmail } from "./email-templates"
 import { buildFacturaPayload, type BillingData } from "./factura"
+import { isOrderPaid } from "./order-status"
 import { isValidRut } from "./rut"
 import { getSimpleFacturaClient } from "./simplefactura"
 import { storefrontUrl } from "./email-templates"
@@ -20,7 +21,8 @@ export type DteMetadata = {
   emailed?: boolean
 }
 
-export type InvoiceResult = "disabled" | "emitted" | "already_emitted"
+/** "unpaid": el pago aún no está capturado/autorizado, no se emite nada. */
+export type InvoiceResult = "disabled" | "emitted" | "already_emitted" | "unpaid"
 
 const ORDER_FIELDS = [
   "id",
@@ -30,6 +32,9 @@ const ORDER_FIELDS = [
   "total",
   "shipping_total",
   "metadata",
+  "payment_collections.status",
+  "payment_collections.amount",
+  "payment_collections.captured_amount",
   "items.product_title",
   "items.variant_title",
   "items.variant_sku",
@@ -184,6 +189,10 @@ export async function issueDocumentForOrder(container: MedusaContainer, orderId:
     if (!existing.data.emailed) await sendDocumentEmail(container, order, existing.tipo, existing.data)
     return "already_emitted"
   }
+
+  // La boleta es un documento tributario: solo se emite cuando el pago está
+  // confirmado. Con una transferencia pendiente se espera a payment.captured.
+  if (!isOrderPaid(order.payment_collections)) return "unpaid"
 
   const { tipo, billing } = resolveDocumentType(order.metadata)
   if ((order.metadata?.billing as BillingData | undefined)?.tipo === "factura" && tipo === "boleta") {

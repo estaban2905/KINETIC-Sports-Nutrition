@@ -239,3 +239,43 @@ export function deliveryEmail(args: {
   )
   return { subject: `Tu pedido #${args.displayId} fue entregado — KINETIC Sports Nutrition`, html }
 }
+
+export function passwordResetEmail(args: { resetUrl: string }): { subject: string; html: string } {
+  const html = emailLayout(
+    `
+    ${heading("Restablece tu contraseña")}
+    ${paragraph("Recibimos una solicitud para cambiar la contraseña de tu cuenta KINETIC. El enlace es válido por 15 minutos.")}
+    ${button(args.resetUrl, "Crear nueva contraseña")}
+    ${paragraph("Si tú no lo pediste, ignora este correo: tu contraseña actual sigue funcionando.")}`,
+    { preheader: "Crea una nueva contraseña para tu cuenta KINETIC" }
+  )
+  return { subject: "Restablece tu contraseña — KINETIC Sports Nutrition", html }
+}
+
+export function welcomeEmail(args: { firstName?: string | null }): { subject: string; html: string } {
+  const siteUrl = storefrontUrl()
+  const name = args.firstName?.trim()
+  const html = emailLayout(
+    `
+    ${heading(name ? `¡Bienvenido, ${name}!` : "¡Bienvenido a KINETIC!")}
+    ${paragraph("Tu cuenta quedó creada. Desde ahora puedes ver el estado de tus pedidos, seguir tus envíos y comprar más rápido con tus datos guardados.")}
+    ${siteUrl ? button(siteUrl, "Ir a la tienda") : ""}`,
+    { preheader: "Tu cuenta KINETIC está lista" }
+  )
+  return { subject: "Bienvenido a KINETIC Sports Nutrition", html }
+}
+
+export function orderPaymentPendingEmail(order: { display_id: number; total?: number | null }): {
+  subject: string
+  html: string
+} {
+  const html = emailLayout(
+    `
+    ${heading("Recibimos tu pedido")}
+    ${paragraph(`Tu pedido ${strong(`#${order.display_id}`)} por ${strong(formatCLP(order.total))} quedó registrado, pero todavía estamos esperando que se confirme tu pago.`)}
+    ${paragraph("En cuanto lo recibamos te enviaremos la confirmación del pedido y tu boleta. Si ya pagaste, puede tardar unos minutos en reflejarse.")}
+    ${trackButton()}`,
+    { preheader: `Pedido #${order.display_id}: esperando la confirmación de tu pago` }
+  )
+  return { subject: `Recibimos tu pedido #${order.display_id}: esperando tu pago — KINETIC Sports Nutrition`, html }
+}

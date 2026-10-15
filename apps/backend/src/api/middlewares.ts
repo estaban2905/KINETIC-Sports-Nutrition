@@ -1,4 +1,5 @@
 import {
+  authenticate,
   clearFiltersByKey,
   defineMiddlewares,
   errorHandler,
@@ -9,6 +10,7 @@ import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusaj
 import { rateLimit } from "express-rate-limit"
 import { listProductQueryConfig } from "@medusajs/medusa/api/store/products/query-config"
 import { StoreGetProductsParams } from "@medusajs/medusa/api/store/products/validators"
+import { assertValidCustomerRut } from "../lib/customer-rut"
 import { Sentry } from "../lib/sentry"
 
 /**
@@ -65,8 +67,44 @@ function reportingErrorHandler(
   return coreErrorHandler(err as any, req, res, next)
 }
 
+/**
+ * Valida metadata.rut al crear o actualizar el perfil del cliente. Solo
+ * rechaza: la ruta de Medusa ya parsea el body con su propio validador, así
+ * que normalizar acá no sería confiable (el formulario manda el RUT ya formateado).
+ */
+function validateCustomerRut(req: MedusaRequest, _res: MedusaResponse, next: MedusaNextFunction) {
+  try {
+    assertValidCustomerRut(req.body)
+    next()
+  } catch (err) {
+    next(err)
+  }
+}
+
 export default defineMiddlewares({
   routes: [
+    {
+      // Solo clientes con sesión/token. El cliente sale del token, nunca de un parámetro.
+      matcher: "/store/customers/me/orders",
+      method: "GET",
+      middlewares: [authenticate("customer", ["session", "bearer"])],
+    },
+    {
+      // Token de Google recién obtenido: todavía no tiene cliente asociado.
+      matcher: "/store/google-link",
+      method: "POST",
+      middlewares: [authenticate("customer", ["bearer"], { allowUnregistered: true })],
+    },
+    {
+      matcher: "/store/customers",
+      method: "POST",
+      middlewares: [validateCustomerRut],
+    },
+    {
+      matcher: "/store/customers/me",
+      method: "POST",
+      middlewares: [validateCustomerRut],
+    },
     {
       matcher: "/store/order-lookup",
       method: "POST",

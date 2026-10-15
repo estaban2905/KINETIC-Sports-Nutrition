@@ -6,6 +6,7 @@ import { Product, ProductFlavor, ProductSize } from '../types';
 import { ProteinVisual } from './ProteinVisual';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
+import { ENABLE_SUBSCRIPTIONS } from '../lib/features';
 import {
   getLandingProductSection,
   getLandingGuarantees,
@@ -323,6 +324,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
             </div>
 
             {/* Purchase Mode Selector: Compra Única vs Suscripción Mensual 15% OFF */}
+            {ENABLE_SUBSCRIPTIONS && (
             <div className="mt-8 space-y-3">
               <label className="block text-xs font-mono uppercase tracking-wider text-neutral-300">
                 3. Modalidad de Compra:
@@ -394,6 +396,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
                 </div>
               )}
             </div>
+            )}
 
             {/* Quantity Selector & Add to Cart CTA */}
             <div className="mt-8 flex flex-col sm:flex-row items-stretch gap-4">
@@ -419,7 +422,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
               </div>
 
               {/* Add to Cart or Subscribe Button */}
-              {purchaseMode === 'subscription' ? (
+              {ENABLE_SUBSCRIPTIONS && purchaseMode === 'subscription' ? (
                 <button
                   type="button"
                   onClick={() => {

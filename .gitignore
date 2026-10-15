@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Credenciales OAuth descargadas de Google Cloud
+client_secret_*.json
