@@ -329,3 +329,55 @@ export async function updateSubscription(
   await deps.subscriptions.updateSubscriptions({ id: sub.id, ...patch })
   return getOwned(deps, id, customerId)
 }
+
+// --- Soporte (admin) -------------------------------------------------------------------
+
+export type AdminSubscriptionRow = SubscriptionRow & {
+  reminder_sent_for?: string | null
+  terms_accepted_at?: Date | string | null
+  cancelled_at?: Date | string | null
+}
+
+/**
+ * Vista para soporte: además de lo del cliente muestra intentos fallidos, si hay
+ * tarjeta y la aceptación de términos. Tampoco expone el token de la tarjeta ni
+ * el de inscripción: nadie del admin necesita verlos.
+ */
+export function serializeAdminSubscription(sub: AdminSubscriptionRow, customerEmail?: string | null) {
+  return {
+    id: sub.id,
+    customer_id: sub.customer_id,
+    customer_email: customerEmail ?? null,
+    variant_id: sub.variant_id,
+    quantity: sub.quantity,
+    status: sub.status,
+    frequency_days: sub.frequency_days,
+    discount_percent: sub.discount_percent,
+    next_billing_date: sub.next_billing_date,
+    failed_attempts: sub.failed_attempts,
+    has_card: !!sub.payment_token_ref,
+    card: sub.card_last4 ? maskedCard(sub.card_brand, sub.card_last4) : null,
+    shipping_address: sub.shipping_address,
+    welcome_gift_given: sub.welcome_gift_given,
+    reminder_sent_for: sub.reminder_sent_for ?? null,
+    terms_accepted_at: sub.terms_accepted_at ?? null,
+    cancelled_at: sub.cancelled_at ?? null,
+    created_at: sub.created_at ?? null,
+  }
+}
+
+export type AdminCycleRow = CycleRow & { attempt?: number }
+
+/** Para soporte el ciclo sí muestra el texto técnico del error y el pedido. */
+export function serializeAdminCycle(cycle: AdminCycleRow) {
+  return {
+    id: cycle.id,
+    period_key: cycle.period_key,
+    status: cycle.status,
+    attempt: cycle.attempt ?? 1,
+    amount: cycle.amount,
+    order_id: cycle.order_id,
+    error: cycle.error,
+    attempted_at: cycle.attempted_at ?? null,
+  }
+}

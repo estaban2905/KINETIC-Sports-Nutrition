@@ -5,6 +5,8 @@ import {
   parseQuantity,
   parseShippingAddress,
   pauseSubscription,
+  serializeAdminCycle,
+  serializeAdminSubscription,
   serializeCycle,
   resumeSubscription,
   serializeSubscription,
@@ -381,5 +383,38 @@ describe("updateSubscription", () => {
     await expect(updateSubscription(makeDeps().deps, "cus_1", "sub_1", {})).rejects.toThrow(/nada que actualizar/)
     const cancelled = makeDeps([row({ status: "cancelled" })])
     await expect(updateSubscription(cancelled.deps, "cus_1", "sub_1", { quantity: 2 })).rejects.toThrow(/cancelada/)
+  })
+})
+
+describe("vista de soporte (admin)", () => {
+  it("muestra intentos fallidos, correo y términos, pero nunca los tokens", () => {
+    const out = serializeAdminSubscription(
+      row({ failed_attempts: 2, inscription_token: "tbk-ins", reminder_sent_for: "2026-10-25" } as any),
+      "ana@example.com"
+    )
+    expect(out).toMatchObject({
+      customer_email: "ana@example.com",
+      failed_attempts: 2,
+      has_card: true,
+      card: "Visa •••• 6623",
+      reminder_sent_for: "2026-10-25",
+    })
+    const json = JSON.stringify(out)
+    expect(json).not.toContain("tbk-secret")
+    expect(json).not.toContain("tbk-ins")
+  })
+
+  it("el ciclo sí incluye el error técnico y el pedido", () => {
+    expect(
+      serializeAdminCycle({
+        id: "subcyc_1",
+        period_key: "2026-10-28",
+        status: "failed",
+        amount: null,
+        order_id: null,
+        error: "rechazado: REJECTED (-1)",
+        attempt: 2,
+      })
+    ).toMatchObject({ status: "failed", attempt: 2, error: "rechazado: REJECTED (-1)" })
   })
 })
