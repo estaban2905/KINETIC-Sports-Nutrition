@@ -103,3 +103,48 @@ recorrerlo a mano una vez.
 - El admin es de solo lectura: reactivar, cancelar o reintentar por un cliente se hace hoy desde la base de datos.
 - Frecuencia fija de 30 días (el modelo ya soporta `frequency_days`, falta exponerlo en la interfaz).
 - Un solo medio de pago (Oneclick). Mercado Pago Preapproval sería la alternativa si la contratación se demora.
+
+## Documentación oficial de referencia
+
+**Transbank (Webpay Oneclick Mall)**
+
+| Tema | Enlace |
+|---|---|
+| Cómo funciona Oneclick (inscripción, cobros, mall, reversas) | https://www.transbankdevelopers.cl/documentacion/oneclick |
+| Referencia de la API REST (inscripción, autorizar, estado, reembolso) | https://www.transbankdevelopers.cl/referencia/oneclick |
+| Autorizar una transacción | https://www.transbankdevelopers.cl/referencia/oneclick#autorizar-una-transaccion |
+| Estado de una transacción | https://www.transbankdevelopers.cl/referencia/oneclick#obtener-estado-de-una-transaccion |
+| Ambiente de integración, códigos de comercio y tarjetas de prueba | https://www.transbankdevelopers.cl/documentacion/como_empezar#ambiente-de-integracion |
+| Puesta en producción y proceso de validación | https://www.transbankdevelopers.cl/documentacion/como_empezar#puesta-en-produccion |
+| SDK de Node (`transbank-sdk`) | https://github.com/TransbankDevelopers/transbank-sdk-nodejs |
+
+Códigos de integración que usa el proyecto: mall `597055555541`, tienda `597055555542`; la llave es la pública de integración
+(la misma de Webpay Plus). Hosts: integración `webpay3gint.transbank.cl`, producción `webpay3g.transbank.cl`.
+
+**Medusa**
+
+| Tema | Enlace |
+|---|---|
+| Proveedor de pago (`AbstractPaymentProvider`) | https://docs.medusajs.com/resources/commerce-modules/payment/payment-provider |
+| Sesión de pago y flujo de checkout | https://docs.medusajs.com/resources/commerce-modules/payment/payment-flow |
+| Receta de suscripciones de Medusa (referencia, no es Oneclick) | https://docs.medusajs.com/resources/recipes/subscriptions/examples/standard |
+
+### Pruebas en integración (datos publicados por Transbank)
+
+- Tarjeta **aprobada**: VISA `4051 8856 0044 6623`, CVV `123`, cualquier vencimiento.
+- Tarjeta **rechazada**: MASTERCARD `5186 0595 5959 0568`, CVV `123`.
+- Si pide autenticación bancaria: RUT `11.111.111-1`, clave `123`.
+- Durante la inscripción Transbank hace un cargo de $50 que **no se captura**. El formulario dura 10 min en integración
+  (4 en producción) y la inscripción debe confirmarse dentro de 60 s (el callback lo hace al instante).
+
+### Reglas de Transbank que el diseño respeta (y una que no)
+
+- Una transacción es aprobada solo si **cada** detalle trae `response_code = 0` y `status = AUTHORIZED` → `parseChargeResult`.
+- El retorno de la inscripción puede llegar por **GET o POST** y, si se aborta o vence, **sin `TBK_TOKEN`** → el callback acepta ambos
+  y trata la falta de token como error sin cobrar.
+- `finish` va con cuerpo vacío y el comercio debe confirmar rápido → lo hace el callback antes de cualquier otra cosa.
+- El estado se consulta por la orden de compra padre (`status`) → base de la idempotencia del cobro y de la conciliación.
+- ⚠️ **Una tarjeta por usuario y comercio**: si el mismo `username` inscribe otra tarjeta, el `tbkUser` anterior queda inválido.
+  Hoy el `username` es el id del **cliente**, así que un cliente con dos suscripciones comparte tarjeta entre ellas: cambiarla en
+  una, o cancelar una (que da de baja la inscripción), deja sin tarjeta válida a la otra. Mejora pendiente: usar el id de la
+  **suscripción** como `username` (cabe en los 40 caracteres).
