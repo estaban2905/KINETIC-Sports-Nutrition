@@ -29,6 +29,9 @@ const Subscription = model
     card_last4: model.text().nullable(),
     shipping_address: model.json().nullable(),
     welcome_gift_given: model.boolean().default(false),
+    // Cobros rechazados seguidos del ciclo en curso. Vuelve a 0 con un cobro
+    // exitoso; al llegar a MAX_CHARGE_ATTEMPTS la suscripción pasa a past_due.
+    failed_attempts: model.number().default(0),
     terms_accepted_at: model.dateTime().nullable(),
     cancelled_at: model.dateTime().nullable(),
   })

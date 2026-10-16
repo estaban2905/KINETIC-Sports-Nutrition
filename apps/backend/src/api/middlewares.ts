@@ -119,6 +119,22 @@ export default defineMiddlewares({
       middlewares: [validateCustomerRut],
     },
     {
+      // Todas las rutas de suscripción exigen sesión; el cliente sale del token.
+      matcher: "/store/subscriptions",
+      method: ["GET", "POST"],
+      middlewares: [authenticate("customer", ["session", "bearer"])],
+    },
+    {
+      matcher: "/store/subscriptions/:id",
+      method: ["GET", "PATCH"],
+      middlewares: [authenticate("customer", ["session", "bearer"])],
+    },
+    {
+      matcher: "/store/subscriptions/:id/:action",
+      method: "POST",
+      middlewares: [authenticate("customer", ["session", "bearer"])],
+    },
+    {
       matcher: "/store/subscriptions/card/start",
       method: "POST",
       middlewares: [authenticate("customer", ["session", "bearer"]), cardEnrollmentRateLimit],

@@ -236,6 +236,22 @@
           "enumItems": [],
           "mappedType": "boolean"
         },
+        "failed_attempts": {
+          "name": "failed_attempts",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "0",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
         "terms_accepted_at": {
           "name": "terms_accepted_at",
           "type": "timestamptz",
