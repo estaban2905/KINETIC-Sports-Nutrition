@@ -115,12 +115,14 @@ class OneclickPaymentProviderService extends AbstractPaymentProvider<OneclickOpt
   }
 
   /** Pregunta a Transbank si la orden del padre ya está cobrada. Un 4xx significa que no existe. */
-  private async alreadyCharged(p: ChargePayload): Promise<"charged" | "not_charged" | "unknown"> {
+  private async alreadyCharged(
+    p: ChargePayload
+  ): Promise<{ state: "charged"; amount: number } | { state: "not_charged" } | { state: "unknown" }> {
     try {
       const status = await this.client_.chargeStatus(p.parentBuyOrder)
-      return status.ok ? "charged" : "not_charged"
+      return status.ok ? { state: "charged", amount: status.amount } : { state: "not_charged" }
     } catch (err) {
-      return isDefinitiveChargeFailure(err) ? "not_charged" : "unknown"
+      return isDefinitiveChargeFailure(err) ? { state: "not_charged" } : { state: "unknown" }
     }
   }
 
@@ -132,11 +134,19 @@ class OneclickPaymentProviderService extends AbstractPaymentProvider<OneclickOpt
     })
 
     const before = await this.alreadyCharged(p)
-    if (before === "unknown") {
+    if (before.state === "unknown") {
       // No se intentó cobrar: es seguro dejarlo para el próximo intento.
       return fail({ not_attempted: true })
     }
-    if (before === "charged") {
+    if (before.state === "charged") {
+      // Un cobro previo solo se reutiliza si es por el MISMO monto; si el pedido
+      // nuevo vale otra cosa (cambió el precio) no se puede dar por pagado.
+      if (before.amount !== p.amount) {
+        const detail = `cobro previo ${p.parentBuyOrder} por ${before.amount}, el pedido nuevo vale ${p.amount}`
+        this.logger_?.error(`[oneclick] ${detail}: requiere revisión manual.`)
+        recordChargeOutcome(p.cycleId, { kind: "ambiguous", detail })
+        return fail({ reuse_amount_mismatch: true })
+      }
       this.logger_?.warn(`[oneclick] ${p.parentBuyOrder} ya figuraba cobrada: se reutiliza, no se cobra de nuevo.`)
       recordChargeOutcome(p.cycleId, { kind: "authorized", authorizationCode: "" })
       return { status: "authorized", data: { ...input.data, charged: true, reused: true } }
@@ -162,11 +172,11 @@ class OneclickPaymentProviderService extends AbstractPaymentProvider<OneclickOpt
       }
       // Corte de red o 5xx: pudo haberse cobrado. Se vuelve a preguntar antes de decidir.
       const after = await this.alreadyCharged(p)
-      if (after === "charged") {
+      if (after.state === "charged" && after.amount === p.amount) {
         recordChargeOutcome(p.cycleId, { kind: "authorized", authorizationCode: "" })
         return { status: "authorized", data: { ...input.data, charged: true, recovered: true } }
       }
-      if (after === "not_charged") {
+      if (after.state === "not_charged") {
         recordChargeOutcome(p.cycleId, { kind: "rejected", code: null, detail: "sin cobro tras error de red" })
         return fail({ rejected: true })
       }
@@ -248,7 +258,7 @@ class OneclickPaymentProviderService extends AbstractPaymentProvider<OneclickOpt
   async getPaymentStatus(input: GetPaymentStatusInput): Promise<GetPaymentStatusOutput> {
     if (!input.data?.charge_token) return { status: "pending" }
     const p = this.payloadOf(input.data)
-    return (await this.alreadyCharged(p)) === "charged" ? { status: "authorized" } : { status: "pending" }
+    return (await this.alreadyCharged(p)).state === "charged" ? { status: "authorized" } : { status: "pending" }
   }
 
   async retrievePayment(input: RetrievePaymentInput): Promise<RetrievePaymentOutput> {

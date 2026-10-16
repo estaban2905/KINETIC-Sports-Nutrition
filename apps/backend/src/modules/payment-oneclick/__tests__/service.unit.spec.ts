@@ -92,6 +92,18 @@ describe("OneclickPaymentProviderService", () => {
       takeChargeOutcome("subcyc_1")
     })
 
+    it("un cobro previo por OTRO monto no se reutiliza: ambiguo, a revisión manual", async () => {
+      const { provider, client, data } = make()
+      client.chargeStatus.mockResolvedValue({ ...ok, amount: 30000 })
+
+      const out = await provider.authorizePayment({ data } as any)
+
+      expect(out.status).toBe("error")
+      expect(out.data).toMatchObject({ reuse_amount_mismatch: true })
+      expect(client.charge).not.toHaveBeenCalled()
+      expect(takeChargeOutcome("subcyc_1")).toMatchObject({ kind: "ambiguous" })
+    })
+
     it("si no puede consultar el estado antes de cobrar, no cobra", async () => {
       const { provider, client, data } = make()
       client.chargeStatus.mockRejectedValue(down())
