@@ -32,6 +32,9 @@ export function getDesiredPaymentProviders(
     "pp_mercadopago_mercadopago",
     "pp_stripe_stripe",
     "pp_khipu_khipu",
+    // Solo cobra suscripciones con un token sellado por el servidor; no es un medio
+    // de pago del checkout (el storefront no lo ofrece, ver CartDrawer).
+    "pp_oneclick_oneclick",
   ]
   return desired.filter((id) => registeredIds.has(id))
 }

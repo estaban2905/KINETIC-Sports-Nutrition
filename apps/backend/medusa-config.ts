@@ -90,6 +90,25 @@ if (process.env.KHIPU_API_KEY) {
   })
 }
 
+// Oneclick (cobro de suscripciones). Sin credenciales usa las de integración de
+// Transbank, pero en producción solo se registra si están todas configuradas,
+// para que su validateOptions no tumbe el arranque de todo el backend.
+if (
+  process.env.ONECLICK_ENVIRONMENT !== "production" ||
+  (process.env.ONECLICK_COMMERCE_CODE && process.env.ONECLICK_CHILD_COMMERCE_CODE && process.env.ONECLICK_API_KEY)
+) {
+  paymentProviders.push({
+    resolve: "./src/modules/payment-oneclick",
+    id: "oneclick",
+    options: {
+      environment: process.env.ONECLICK_ENVIRONMENT || "integration",
+      commerceCode: process.env.ONECLICK_COMMERCE_CODE,
+      childCommerceCode: process.env.ONECLICK_CHILD_COMMERCE_CODE,
+      apiKey: process.env.ONECLICK_API_KEY,
+    },
+  })
+}
+
 const notificationProviders: Record<string, unknown>[] = [
   // Preserves Medusa's default local/feed notification provider (admin UI feed).
   {

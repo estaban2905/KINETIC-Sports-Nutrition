@@ -4,6 +4,9 @@ import { SUBSCRIPTION_MODULE } from "../../../modules/subscription"
 import type SubscriptionModuleService from "../../../modules/subscription/service"
 import { OneclickClient } from "../../../lib/oneclick"
 import { cardReturnUrl, completeCardEnrollment } from "../../../lib/subscription-card"
+import { activateAndCharge, buildCycleDeps } from "../../../lib/subscription-order"
+import { describeError } from "../../../lib/describe-error"
+import { Sentry } from "../../../lib/sentry"
 
 /**
  * A esta URL vuelve el navegador del cliente desde Transbank al terminar (o
@@ -29,8 +32,22 @@ async function handle(req: MedusaRequest, res: MedusaResponse) {
       token
     )
     outcome = result.outcome
+
+    // Tarjeta lista: una suscripción pendiente (o vencida) se activa y cobra su
+    // primer ciclo ya. Un fallo aquí no cambia el resultado de la inscripción: la
+    // tarjeta quedó guardada y el estado real se ve en la suscripción.
+    if (result.outcome === "ok") {
+      try {
+        await activateAndCharge(buildCycleDeps(req.scope), result.subscriptionId)
+      } catch (err) {
+        logger.error(
+          `[subscription] no se pudo cobrar el primer ciclo de ${result.subscriptionId}: ${describeError(err)}`
+        )
+        Sentry.captureException(err, { extra: { subscriptionId: result.subscriptionId } })
+      }
+    }
   } catch (err) {
-    logger.error(`[oneclick] error al completar la inscripción: ${err instanceof Error ? err.message : err}`)
+    logger.error(`[oneclick] error al completar la inscripción: ${describeError(err)}`)
   }
 
   res.redirect(303, cardReturnUrl(process.env.STOREFRONT_URL, outcome))
