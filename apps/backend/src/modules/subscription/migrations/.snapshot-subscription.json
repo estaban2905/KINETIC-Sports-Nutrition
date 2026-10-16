@@ -252,6 +252,22 @@
           "enumItems": [],
           "mappedType": "integer"
         },
+        "reminder_sent_for": {
+          "name": "reminder_sent_for",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
         "terms_accepted_at": {
           "name": "terms_accepted_at",
           "type": "timestamptz",

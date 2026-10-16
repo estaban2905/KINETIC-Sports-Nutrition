@@ -118,7 +118,14 @@ describe("runSubscriptionCycle: éxito", () => {
       subscriptionId: s.state.id,
       orderId: "order_1",
       amount: 72000,
+      firstCycle: true,
     })
+  })
+
+  it("solo el primer ciclo se marca como tal (para el correo de suscripción activa)", async () => {
+    const later = make(sub({ welcome_gift_given: true }))
+    await runSubscriptionCycle(later.deps, "sub_x")
+    expect(later.deps.notify).toHaveBeenCalledWith(expect.objectContaining({ type: "charged", firstCycle: false }))
   })
 
   it("el regalo de bienvenida va solo en el primer ciclo y solo si hay uno configurado", async () => {

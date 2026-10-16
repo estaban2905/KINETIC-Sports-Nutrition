@@ -72,6 +72,7 @@ function makeDeps(rows: SubscriptionRow[] = [row()], now = new Date("2026-10-28T
     comunaIsCovered: jest.fn().mockResolvedValue(true),
     oneclick: { deleteInscription: jest.fn().mockResolvedValue(undefined) },
     logger: { warn: jest.fn() },
+    notify: jest.fn().mockResolvedValue(undefined),
     now: () => now,
   }
   return { deps, subscriptions, store }
@@ -203,6 +204,31 @@ describe("propiedad", () => {
     expect(subscriptions.transitionStatus).not.toHaveBeenCalled()
     expect(subscriptions.updateSubscriptions).not.toHaveBeenCalled()
     expect(deps.oneclick.deleteInscription).not.toHaveBeenCalled()
+  })
+})
+
+describe("avisos por correo", () => {
+  it("pausar y cancelar avisan al cliente", async () => {
+    const a = makeDeps()
+    await pauseSubscription(a.deps, "cus_1", "sub_1")
+    expect(a.deps.notify).toHaveBeenCalledWith("paused", "sub_1")
+
+    const b = makeDeps()
+    await cancelSubscription(b.deps, "cus_1", "sub_1")
+    expect(b.deps.notify).toHaveBeenCalledWith("cancelled", "sub_1")
+  })
+
+  it("si el correo falla, la acción igual se completa", async () => {
+    const { deps } = makeDeps()
+    ;(deps.notify as jest.Mock).mockRejectedValue(new Error("resend caído"))
+    expect((await pauseSubscription(deps, "cus_1", "sub_1")).status).toBe("paused")
+    expect(deps.logger!.warn).toHaveBeenCalled()
+  })
+
+  it("una acción rechazada no avisa", async () => {
+    const { deps } = makeDeps([row({ status: "cancelled" })])
+    await expect(pauseSubscription(deps, "cus_1", "sub_1")).rejects.toThrow()
+    expect(deps.notify).not.toHaveBeenCalled()
   })
 })
 

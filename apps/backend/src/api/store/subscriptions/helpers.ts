@@ -5,6 +5,7 @@ import type SubscriptionModuleService from "../../../modules/subscription/servic
 import { OneclickClient } from "../../../lib/oneclick"
 import { resolveCountyCode } from "../../../modules/fulfillment-chilexpress/coverage"
 import type { ActionDeps } from "../../../lib/subscription-actions"
+import { sendSubscriptionEmail } from "../../../lib/subscription-notify"
 
 /** El cliente sale del token, nunca de un parámetro o del cuerpo. */
 export function customerIdOf(req: AuthenticatedMedusaRequest): string {
@@ -21,6 +22,7 @@ export function buildActionDeps(req: AuthenticatedMedusaRequest): ActionDeps {
     subscriptions: req.scope.resolve<SubscriptionModuleService>(SUBSCRIPTION_MODULE) as any,
     oneclick: OneclickClient.fromEnv(),
     logger,
+    notify: (kind, subscriptionId) => sendSubscriptionEmail(req.scope, { kind, subscriptionId }),
     async variantIsPurchasable(variantId) {
       const { data } = await query.graph({
         entity: "product_variant",

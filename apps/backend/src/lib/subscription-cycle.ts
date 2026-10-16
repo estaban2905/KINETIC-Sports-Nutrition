@@ -48,7 +48,7 @@ export type PlaceOrderInput = {
 }
 
 export type CycleEvent =
-  | { type: "charged"; subscriptionId: string; orderId: string; amount: number }
+  | { type: "charged"; subscriptionId: string; orderId: string; amount: number; firstCycle: boolean }
   | { type: "rejected"; subscriptionId: string; willRetryOn: string | null; pastDue: boolean }
   | { type: "skipped_no_stock"; subscriptionId: string }
 
@@ -191,7 +191,14 @@ export async function runSubscriptionCycle(deps: CycleDeps, subscriptionId: stri
     error: null,
   })
   await deps.subscriptions.updateSubscriptions({ id: sub.id, ...successUpdate(sub, periodKey, now) })
-  await safeNotify(deps, { type: "charged", subscriptionId: sub.id, orderId: placed.orderId, amount: placed.total })
+  await safeNotify(deps, {
+    type: "charged",
+    subscriptionId: sub.id,
+    orderId: placed.orderId,
+    amount: placed.total,
+    // Antes del cobro todavía no se había entregado el regalo: es el primer ciclo.
+    firstCycle: !sub.welcome_gift_given,
+  })
   return { result: "completed", orderId: placed.orderId, amount: placed.total }
 }
 

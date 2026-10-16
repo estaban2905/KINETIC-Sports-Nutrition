@@ -32,6 +32,8 @@ const Subscription = model
     // Cobros rechazados seguidos del ciclo en curso. Vuelve a 0 con un cobro
     // exitoso; al llegar a MAX_CHARGE_ATTEMPTS la suscripción pasa a past_due.
     failed_attempts: model.number().default(0),
+    // Día de cobro para el que ya se envió el aviso previo; evita avisar dos veces.
+    reminder_sent_for: model.text().nullable(),
     terms_accepted_at: model.dateTime().nullable(),
     cancelled_at: model.dateTime().nullable(),
   })

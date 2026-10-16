@@ -18,6 +18,7 @@ import { oneclickUsername } from "./oneclick"
 import { discountedUnitPrice } from "./subscription-billing"
 import { activateAndCharge, runSubscriptionCycle, type CycleDeps, type PlaceOrderInput } from "./subscription-cycle"
 import { Sentry } from "./sentry"
+import { emailForCycleEvent, sendSubscriptionEmail } from "./subscription-notify"
 
 /**
  * Lado Medusa de un ciclo de suscripción: arma el pedido de la renovación con el
@@ -76,6 +77,15 @@ async function listPriceOf(container: MedusaContainer, variantId: string, region
   const amount = (data[0] as any)?.calculated_price?.calculated_amount
   if (typeof amount !== "number") throw new Error(`Suscripción: la variante ${variantId} no tiene precio en CLP.`)
   return amount
+}
+
+/** Monto estimado del próximo cobro (precio vigente con descuento por cantidad; el envío es gratis). */
+export async function estimateCycleAmount(container: MedusaContainer, subscriptionId: string): Promise<number> {
+  const subscriptions = container.resolve<SubscriptionModuleService>(SUBSCRIPTION_MODULE)
+  const sub = await subscriptions.retrieveSubscription(subscriptionId)
+  const { regionId } = await loadSalesContext(container)
+  const listPrice = await listPriceOf(container, sub.variant_id, regionId)
+  return discountedUnitPrice(listPrice, sub.discount_percent) * sub.quantity
 }
 
 export async function variantHasStock(
@@ -208,6 +218,10 @@ export function buildCycleDeps(container: MedusaContainer): CycleDeps {
     hasStock: (i) => variantHasStock(container, i),
     placeOrder: (i) => placeSubscriptionOrder(container, { ...i, giftVariantId }),
     giftVariantId,
+    async notify(event) {
+      const email = emailForCycleEvent(event)
+      if (email) await sendSubscriptionEmail(container, email)
+    },
     logger,
     report: (err, extra) => Sentry.captureException(err, { extra }),
   }

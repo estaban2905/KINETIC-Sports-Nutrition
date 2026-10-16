@@ -52,8 +52,18 @@ export type ActionDeps = {
   /** Chilexpress cubre la comuna. true si no se puede consultar la cobertura. */
   comunaIsCovered(city: string): Promise<boolean>
   oneclick: { deleteInscription(input: { tbkUser: string; username: string }): Promise<void> }
+  /** Correo de confirmación al pausar o cancelar. De mejor esfuerzo. */
+  notify?(kind: "paused" | "cancelled", subscriptionId: string): Promise<void>
   logger?: { warn(msg: string): void }
   now?: () => Date
+}
+
+async function notifyQuietly(deps: ActionDeps, kind: "paused" | "cancelled", subscriptionId: string) {
+  try {
+    await deps.notify?.(kind, subscriptionId)
+  } catch (err) {
+    deps.logger?.warn(`[subscription] no se pudo avisar (${kind}) de ${subscriptionId}: ${err instanceof Error ? err.message : err}`)
+  }
 }
 
 // --- Salida ---------------------------------------------------------------------
@@ -195,6 +205,7 @@ export async function createSubscription(
 export async function pauseSubscription(deps: ActionDeps, customerId: string, id: string) {
   const sub = await getOwned(deps, id, customerId)
   await deps.subscriptions.transitionStatus(sub.id, "paused")
+  await notifyQuietly(deps, "paused", sub.id)
   return getOwned(deps, id, customerId)
 }
 
@@ -240,6 +251,7 @@ export async function cancelSubscription(deps: ActionDeps, customerId: string, i
       )
     }
   }
+  await notifyQuietly(deps, "cancelled", sub.id)
   return getOwned(deps, id, customerId)
 }
 
