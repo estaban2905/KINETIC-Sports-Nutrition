@@ -164,6 +164,9 @@ module.exports = defineConfig({
       resolve: "./src/modules/invoicing",
     },
     {
+      resolve: "./src/modules/subscription",
+    },
+    {
       // Candados compartidos vía PostgreSQL (sin necesitar Redis): evitan que dos
       // procesos o instancias hagan a la vez algo que no se puede repetir, como
       // emitir una boleta (ver lib/order-lock.ts).
