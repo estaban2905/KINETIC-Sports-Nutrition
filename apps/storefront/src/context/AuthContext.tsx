@@ -1,31 +1,15 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { HttpTypes } from '@medusajs/types';
 import { medusa } from '../lib/medusa';
-import { ENABLE_ACCOUNTS } from '../lib/features';
+import { ENABLE_ACCOUNTS, ENABLE_SUBSCRIPTIONS } from '../lib/features';
 import { initialsAvatar } from '../lib/avatar';
 import { joinName, normalizeRutForSave, splitName } from '../lib/accountValidation';
 import { readGoogleToken } from '../lib/googleAuth';
 import { addressToRemember, billingToRemember, type AddressLike } from '../lib/accountData';
 import { CustomerOrderResponse, UserOrder, mapCustomerOrder } from '../lib/accountOrders';
+import { Subscription, listSubscriptions } from '../lib/subscriptions';
 
 export type { UserOrder, UserOrderItem } from '../lib/accountOrders';
-
-export interface UserMembership {
-  id: string;
-  productName: string;
-  flavorName: string;
-  flavorId: string;
-  price: number;
-  originalPrice: number;
-  discountPercent: number;
-  frequencyDays: number;
-  status: 'active' | 'paused' | 'cancelled';
-  nextBillingDate: string;
-  nextDeliveryEstimate: string;
-  shippingCarrier: string;
-  paymentMethod: string;
-  welcomeGiftIncluded: boolean;
-}
 
 export interface User {
   id: string;
@@ -36,14 +20,10 @@ export interface User {
   phone: string;
   /** Datos de factura de la última compra con factura (customer.metadata.billing). */
   billing: Record<string, string> | null;
-  /**
-   * Solo en memoria y detrás de VITE_ENABLE_SUBSCRIPTIONS: todavía no hay
-   * cobro recurrente en el backend, así que nada de esto se guarda ni se cobra.
-   */
-  membership?: UserMembership | null;
 }
 
 export type OrdersStatus = 'idle' | 'loading' | 'ready' | 'error';
+export type SubscriptionsStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export interface ProfileUpdate {
   name: string;
@@ -78,11 +58,10 @@ interface AuthContextValue {
   refreshAddresses: () => Promise<void>;
   createAddress: (body: HttpTypes.StoreCreateCustomerAddress) => Promise<void>;
   deleteAddress: (addressId: string) => Promise<void>;
-  subscribeMembership: (flavorId: string, flavorName: string) => void;
-  changeMembershipFlavor: (newFlavorId: string, newFlavorName: string) => void;
-  pauseMembership: () => void;
-  resumeMembership: () => void;
-  cancelMembership: () => void;
+  /** Suscripciones reales del cliente (vacío si el flag está apagado). */
+  subscriptions: Subscription[];
+  subscriptionsStatus: SubscriptionsStatus;
+  refreshSubscriptions: () => Promise<void>;
 }
 
 /** Customer de Medusa -> usuario del storefront. */
@@ -116,6 +95,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [orders, setOrders] = useState<UserOrder[]>([]);
   const [ordersStatus, setOrdersStatus] = useState<OrdersStatus>('idle');
   const [addresses, setAddresses] = useState<HttpTypes.StoreCustomerAddress[]>([]);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [subscriptionsStatus, setSubscriptionsStatus] = useState<SubscriptionsStatus>('idle');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Siempre el valor más reciente, para callbacks que se crean una sola vez.
@@ -129,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadCustomer = useCallback(async () => {
     const { customer } = await medusa.store.customer.retrieve();
-    setUser((prev) => ({ ...userFromCustomer(customer), membership: prev?.membership ?? null }));
+    setUser(userFromCustomer(customer));
     return customer;
   }, []);
 
@@ -229,6 +210,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setOrders([]);
       setOrdersStatus('idle');
       setAddresses([]);
+      setSubscriptions([]);
+      setSubscriptionsStatus('idle');
     }
   }, []);
 
@@ -247,7 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // El RUT se valida también en el backend (middleware de /store/customers/me).
       metadata: { rut: normalizeRutForSave(data.rut), ...(userRef.current?.billing ? { billing: userRef.current.billing } : {}) },
     });
-    setUser((prev) => ({ ...userFromCustomer(customer), membership: prev?.membership ?? null }));
+    setUser(userFromCustomer(customer));
   }, []);
 
   const refreshOrders = useCallback(async () => {
@@ -260,6 +243,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setOrdersStatus('ready');
     } catch {
       setOrdersStatus('error');
+    }
+  }, []);
+
+  const refreshSubscriptions = useCallback(async () => {
+    if (!ENABLE_SUBSCRIPTIONS) return;
+    setSubscriptionsStatus('loading');
+    try {
+      setSubscriptions(await listSubscriptions());
+      setSubscriptionsStatus('ready');
+    } catch {
+      setSubscriptionsStatus('error');
     }
   }, []);
 
@@ -307,7 +301,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...((billing ?? current.billing) ? { billing: (billing ?? current.billing)! } : {}),
           },
         });
-        setUser((prev) => ({ ...userFromCustomer(customer), membership: prev?.membership ?? null }));
+        setUser(userFromCustomer(customer));
       }
     } catch {
       // Guardar los datos es una comodidad: nunca debe afectar a la compra.
@@ -320,38 +314,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!userId) return;
     refreshOrders();
     refreshAddresses().catch(() => undefined);
-  }, [userId, refreshOrders, refreshAddresses]);
-
-  const updateMembership = (patch: (m: UserMembership) => UserMembership) =>
-    setUser((prev) => (prev?.membership ? { ...prev, membership: patch(prev.membership) } : prev));
-
-  const subscribeMembership = useCallback((flavorId: string, flavorName: string) => {
-    const membership: UserMembership = {
-      id: 'local-' + Math.random().toString(36).substring(2, 8),
-      productName: 'PROTEIN X - CFM Whey Isolate (2 LBS)',
-      flavorName,
-      flavorId,
-      price: 34390,
-      originalPrice: 42990,
-      discountPercent: 15,
-      frequencyDays: 30,
-      status: 'active',
-      nextBillingDate: '',
-      nextDeliveryEstimate: '',
-      shippingCarrier: 'Chilexpress',
-      paymentMethod: '',
-      welcomeGiftIncluded: true,
-    };
-    setUser((prev) => (prev ? { ...prev, membership } : null));
-  }, []);
-
-  const changeMembershipFlavor = useCallback(
-    (flavorId: string, flavorName: string) => updateMembership((m) => ({ ...m, flavorId, flavorName })),
-    []
-  );
-  const pauseMembership = useCallback(() => updateMembership((m) => ({ ...m, status: 'paused' })), []);
-  const resumeMembership = useCallback(() => updateMembership((m) => ({ ...m, status: 'active' })), []);
-  const cancelMembership = useCallback(() => updateMembership((m) => ({ ...m, status: 'cancelled' })), []);
+    refreshSubscriptions();
+  }, [userId, refreshOrders, refreshAddresses, refreshSubscriptions]);
 
   return (
     <AuthContext.Provider
@@ -378,11 +342,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshAddresses,
         createAddress,
         deleteAddress,
-        subscribeMembership,
-        changeMembershipFlavor,
-        pauseMembership,
-        resumeMembership,
-        cancelMembership,
+        subscriptions,
+        subscriptionsStatus,
+        refreshSubscriptions,
       }}
     >
       {children}

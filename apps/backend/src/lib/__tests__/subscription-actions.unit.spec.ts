@@ -100,11 +100,13 @@ describe("serializeSubscription: datos para mostrar", () => {
   it("incluye nombre del producto, variante y monto estimado cuando se conocen", () => {
     const out = serializeSubscription(row(), {
       product_title: "GOLD STANDARD 100% WHEY",
+      product_handle: "kinetic-gold-standard-whey",
       variant_title: "Double Rich Chocolate / 2 Libras",
       next_amount: 56092,
     })
     expect(out).toMatchObject({
       product_title: "GOLD STANDARD 100% WHEY",
+      product_handle: "kinetic-gold-standard-whey",
       variant_title: "Double Rich Chocolate / 2 Libras",
       next_amount: 56092,
     })

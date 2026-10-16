@@ -61,15 +61,19 @@ export async function presentSubscriptions(req: AuthenticatedMedusaRequest, rows
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER)
 
-  const labels = new Map<string, { product_title: string | null; variant_title: string | null }>()
+  const labels = new Map<string, { product_title: string | null; product_handle: string | null; variant_title: string | null }>()
   try {
     const { data } = await query.graph({
       entity: "variant",
-      fields: ["id", "title", "product.title"],
+      fields: ["id", "title", "product.title", "product.handle"],
       filters: { id: [...new Set(rows.map((r) => r.variant_id))] },
     })
     for (const v of data as any[]) {
-      labels.set(v.id, { product_title: v.product?.title ?? null, variant_title: v.title ?? null })
+      labels.set(v.id, {
+        product_title: v.product?.title ?? null,
+        product_handle: v.product?.handle ?? null,
+        variant_title: v.title ?? null,
+      })
     }
   } catch (err) {
     logger.warn(`[subscription] no se pudieron leer los nombres de producto: ${err instanceof Error ? err.message : err}`)

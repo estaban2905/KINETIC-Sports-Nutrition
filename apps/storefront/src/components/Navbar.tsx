@@ -4,6 +4,7 @@ import { ShoppingBag, Menu, X, Zap, ChevronRight, User as UserIcon, Package, Rep
 import { Link } from 'react-router-dom';
 import { LandingSettings, LandingNavLink, getLandingNavLinks } from '../lib/landing';
 import { useAuth } from '../context/AuthContext';
+import { hasActiveSubscription } from '../lib/subscriptions';
 import { ENABLE_ACCOUNTS } from '../lib/features';
 
 interface NavbarProps {
@@ -25,7 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings 
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [navLinksData, setNavLinksData] = useState<LandingNavLink[] | null>(null);
-  const { user, isAuthenticated, openAuthModal } = useAuth();
+  const { user, isAuthenticated, openAuthModal, subscriptions } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -131,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings 
                 <span className="hidden lg:inline text-xs font-semibold max-w-[100px] truncate">
                   {user.name.split(' ')[0]}
                 </span>
-                {user.membership?.status === 'active' && (
+                {hasActiveSubscription(subscriptions) && (
                   <span className="hidden sm:inline-block w-2 h-2 rounded-full bg-lime-400" />
                 )}
               </Link>

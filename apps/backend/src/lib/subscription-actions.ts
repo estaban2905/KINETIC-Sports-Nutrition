@@ -71,6 +71,8 @@ async function notifyQuietly(deps: ActionDeps, kind: "paused" | "cancelled", sub
 export type SubscriptionExtras = {
   /** Nombre legible del producto y de la variante ("Double Rich Chocolate / 2 Libras"). */
   product_title?: string | null
+  /** Handle del producto en Medusa; el storefront lo usa para ubicarlo en su catálogo. */
+  product_handle?: string | null
   variant_title?: string | null
   /** Monto estimado del próximo cobro, en pesos. */
   next_amount?: number | null
@@ -94,6 +96,7 @@ export function serializeSubscription(sub: SubscriptionRow, extras: Subscription
     welcome_gift_given: sub.welcome_gift_given,
     created_at: sub.created_at ?? null,
     product_title: extras.product_title ?? null,
+    product_handle: extras.product_handle ?? null,
     variant_title: extras.variant_title ?? null,
     next_amount: extras.next_amount ?? null,
   }

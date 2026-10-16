@@ -12,10 +12,6 @@ import {
   ExternalLink,
   Zap,
   ArrowRight,
-  ShieldCheck,
-  Calendar,
-  Edit2,
-  Gift,
   MessageCircle,
   Save,
   Check,
@@ -26,6 +22,8 @@ import { useAuth } from '../context/AuthContext';
 import { ENABLE_ACCOUNTS, ENABLE_SUBSCRIPTIONS } from '../lib/features';
 import { ComunaAutocomplete } from '../components/ComunaAutocomplete';
 import { listComunas } from '../lib/medusa';
+import { MembershipTab } from '../components/MembershipTab';
+import { hasActiveSubscription } from '../lib/subscriptions';
 import { validateContactForm } from '../lib/checkoutValidation';
 import { validateProfileForm, splitName, describeAuthError } from '../lib/accountValidation';
 import {
@@ -41,13 +39,6 @@ const currencyFormatter = new Intl.NumberFormat('es-CL', {
   currency: 'CLP',
   maximumFractionDigits: 0,
 });
-
-const FLAVOR_OPTIONS = [
-  { id: 'chocolate-suizo', name: 'Chocolate Suizo', hex: '#78350f' },
-  { id: 'vainilla-bourbon', name: 'Vainilla Bourbon', hex: '#ca8a04' },
-  { id: 'frutilla-silvestre', name: 'Frutilla Silvestre', hex: '#e11d48' },
-  { id: 'cookies-cream', name: 'Cookies & Cream', hex: '#525252' },
-];
 
 const INPUT_CLASS =
   'w-full bg-neutral-800 border rounded-xl px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-lime-400 transition-colors';
@@ -81,11 +72,7 @@ export const AccountPage: React.FC = () => {
     openAuthModal,
     logout,
     updateProfile,
-    changeMembershipFlavor,
-    pauseMembership,
-    resumeMembership,
-    cancelMembership,
-    subscribeMembership,
+    subscriptions,
   } = useAuth();
 
   // Profile form state
@@ -104,12 +91,6 @@ export const AccountPage: React.FC = () => {
   const [addressForm, setAddressForm] = useState(EMPTY_ADDRESS_FORM);
   const [addressErrors, setAddressErrors] = useState<Record<string, string | undefined>>({});
   const [addressSaving, setAddressSaving] = useState(false);
-
-  // Flavor modal state
-  const [isChangingFlavor, setIsChangingFlavor] = useState(false);
-  const [selectedNewFlavor, setSelectedNewFlavor] = useState(
-    user?.membership?.flavorId || FLAVOR_OPTIONS[0].id
-  );
 
   // Notification / Toast state
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -201,15 +182,6 @@ export const AccountPage: React.FC = () => {
       showNotice('Dirección eliminada.');
     } catch (err) {
       showNotice(describeAuthError(err));
-    }
-  };
-
-  const handleConfirmFlavorChange = () => {
-    const chosen = FLAVOR_OPTIONS.find((f) => f.id === selectedNewFlavor);
-    if (chosen) {
-      changeMembershipFlavor(chosen.id, chosen.name);
-      setIsChangingFlavor(false);
-      showNotice(`Sabor actualizado a ${chosen.name} para tu próximo envío.`);
     }
   };
 
@@ -314,10 +286,10 @@ export const AccountPage: React.FC = () => {
                   <h1 className="text-2xl sm:text-3xl font-black font-display uppercase tracking-tight text-white">
                     {user.name}
                   </h1>
-                  {user.membership && user.membership.status === 'active' && (
+                  {hasActiveSubscription(subscriptions) && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold uppercase font-mono bg-lime-400/10 text-lime-400 border border-lime-400/30">
                       <Zap className="w-3 h-3 fill-lime-400" />
-                      Membresía Activa (15% OFF)
+                      Suscripción activa
                     </span>
                   )}
                 </div>
@@ -372,8 +344,8 @@ export const AccountPage: React.FC = () => {
             }`}
           >
             <Repeat className="w-4 h-4" />
-            <span>Mi Membresía Mensual</span>
-            {user.membership && (
+            <span>Mi suscripción</span>
+            {hasActiveSubscription(subscriptions) && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-lime-400/20 text-lime-400 font-mono font-bold ml-1">
                 15% OFF
               </span>
@@ -593,230 +565,8 @@ export const AccountPage: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 2: Mi Membresía Mensual */}
-        {ENABLE_SUBSCRIPTIONS && currentTab === 'membership' && (
-          <div className="space-y-8">
-            {user.membership ? (
-              <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-lime-400/10 rounded-full blur-3xl pointer-events-none" />
-
-                {/* Membership Top Status Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-neutral-800 gap-4 relative z-10">
-                  <div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-2xl font-black font-display uppercase tracking-wide text-white">
-                        Membresía KINETIC Club
-                      </span>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-mono font-bold uppercase ${
-                          user.membership.status === 'active'
-                            ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30'
-                            : user.membership.status === 'paused'
-                            ? 'bg-amber-400/20 text-amber-400 border border-amber-400/30'
-                            : 'bg-red-400/20 text-red-400 border border-red-400/30'
-                        }`}
-                      >
-                        {user.membership.status === 'active'
-                          ? '● Activa (Despacho Automático)'
-                          : user.membership.status === 'paused'
-                          ? '❚❚ Pausada Temporalmente'
-                          : 'Cancelada'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      Ahorro continuo del 15% en cada entrega mensual con despacho prioritario.
-                    </p>
-                  </div>
-
-                  <div className="text-left sm:text-right">
-                    <span className="text-xs text-neutral-400 block uppercase font-mono">
-                      Cuota Mensual
-                    </span>
-                    <div className="flex items-baseline sm:justify-end gap-2">
-                      <span className="text-sm line-through text-neutral-500 font-mono">
-                        {currencyFormatter.format(user.membership.originalPrice)}
-                      </span>
-                      <span className="text-2xl font-black font-display text-lime-400">
-                        {currencyFormatter.format(user.membership.price)} / mes
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Current Delivery & Flavor Card */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-6 border-b border-neutral-800 relative z-10">
-                  {/* Next Delivery */}
-                  <div className="bg-neutral-950 p-5 rounded-2xl border border-neutral-800">
-                    <div className="flex items-center gap-2 text-xs font-mono text-neutral-400 uppercase mb-2">
-                      <Calendar className="w-4 h-4 text-lime-400" />
-                      <span>Próximo Cobro & Envío</span>
-                    </div>
-                    <p className="text-xl font-black font-display text-white">
-                      {user.membership.nextBillingDate}
-                    </p>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      Estimado de entrega en domicilio:{' '}
-                      <strong className="text-neutral-200">{user.membership.nextDeliveryEstimate}</strong>
-                    </p>
-                  </div>
-
-                  {/* Flavor Selected */}
-                  <div className="bg-neutral-950 p-5 rounded-2xl border border-neutral-800 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-mono text-neutral-400 uppercase">
-                          Sabor Seleccionado
-                        </span>
-                        <span className="text-[10px] bg-neutral-800 px-2 py-0.5 rounded text-neutral-300 font-mono">
-                          Editable
-                        </span>
-                      </div>
-                      <p className="text-xl font-black font-display text-white">
-                        {user.membership.flavorName}
-                      </p>
-                      <p className="text-xs text-neutral-400 mt-1">
-                        Puedes rotar sabores en cualquier momento antes de cada cobro.
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setIsChangingFlavor(true)}
-                      className="mt-4 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-lime-400 font-semibold text-xs border border-neutral-700 transition-colors"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      <span>Cambiar Sabor del Mes</span>
-                    </button>
-                  </div>
-
-                  {/* Member Perks */}
-                  <div className="bg-neutral-950 p-5 rounded-2xl border border-neutral-800 space-y-2.5">
-                    <span className="text-xs font-mono text-neutral-400 uppercase block mb-1">
-                      Beneficios Incluidos
-                    </span>
-                    <div className="flex items-center gap-2 text-xs text-neutral-300">
-                      <Check className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
-                      <span>15% OFF garantizado en cada pote</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-neutral-300">
-                      <Check className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
-                      <span>Despacho con Chilexpress y seguimiento</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-neutral-300">
-                      <Gift className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
-                      <span>Shaker de Acero KINETIC en tu 1er mes</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-neutral-300">
-                      <ShieldCheck className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
-                      <span>Sin compromiso: pausa o cancela en 1 clic</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Self-service management buttons */}
-                <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
-                  <div className="text-xs text-neutral-400 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-neutral-500" />
-                    <span>Método de pago: {user.membership.paymentMethod}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {user.membership.status === 'active' ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            showNotice('¡Genial! Hemos programado el despacho prioritario para las próximas 24 horas.');
-                          }}
-                          className="px-4 py-2.5 rounded-xl bg-lime-400 hover:bg-lime-300 text-neutral-950 font-bold text-xs uppercase font-display tracking-wider transition-all shadow-md"
-                        >
-                          Adelantar Envío Ahora
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            pauseMembership();
-                            showNotice('Membresía pausada por 30 días. No se realizarán cobros.');
-                          }}
-                          className="px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-200 text-xs font-semibold border border-neutral-700 transition-colors"
-                        >
-                          Pausar 1 Mes
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            cancelMembership();
-                            showNotice('Tu membresía ha sido cancelada. Puedes reactivarla cuando desees.');
-                          }}
-                          className="px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-red-500/10 text-neutral-400 hover:text-red-400 text-xs font-semibold border border-neutral-800 transition-colors"
-                        >
-                          Cancelar Membresía
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          resumeMembership();
-                          showNotice('¡Membresía reactivada con éxito! Bienvenido de nuevo a KINETIC Club.');
-                        }}
-                        className="px-6 py-2.5 rounded-xl bg-lime-400 hover:bg-lime-300 text-neutral-950 font-bold text-xs uppercase font-display tracking-wider transition-all shadow-lg"
-                      >
-                        Reanudar mi Membresía
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* No Membership banner */
-              <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-6">
-                <div className="w-16 h-16 rounded-2xl bg-lime-400/10 border border-lime-400/30 flex items-center justify-center text-lime-400 mx-auto">
-                  <Repeat className="w-8 h-8" />
-                </div>
-
-                <div>
-                  <h3 className="text-2xl sm:text-3xl font-black font-display uppercase tracking-tight text-white">
-                    Suscríbete a KINETIC Club y <span className="text-lime-400">Ahorra 15%</span>
-                  </h3>
-                  <p className="text-neutral-400 text-sm mt-2 max-w-md mx-auto">
-                    Recibe tu tarro de PROTEIN X CFM cada mes en la puerta de tu casa. Nunca te quedes sin proteína,
-                    con despacho por Chilexpress y Shaker de regalo en tu primer pedido.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left max-w-lg mx-auto">
-                  <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-                    <span className="text-lime-400 font-bold text-lg font-display block">15% OFF</span>
-                    <span className="text-xs text-neutral-400">$34.390 en vez de $42.990</span>
-                  </div>
-                  <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-                    <span className="text-lime-400 font-bold text-lg font-display block">Chilexpress</span>
-                    <span className="text-xs text-neutral-400">Despacho a todo Chile con seguimiento</span>
-                  </div>
-                  <div className="bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-                    <span className="text-lime-400 font-bold text-lg font-display block">1-Click</span>
-                    <span className="text-xs text-neutral-400">Cancela o pausa sin preguntas</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    subscribeMembership('chocolate-suizo', 'Chocolate Suizo');
-                    showNotice('¡Membresía KINETIC activada! Te enviaremos tu primer pedido con Shaker de regalo.');
-                  }}
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-lime-400 hover:bg-lime-300 text-neutral-950 font-bold font-display uppercase tracking-wider text-sm transition-all shadow-xl transform active:scale-95"
-                >
-                  <Zap className="w-4 h-4 fill-neutral-950" />
-                  <span>Activar Membresía Mensual ($34.390/mes)</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Tab 2: Mi Membresía (suscripciones reales) */}
+        {ENABLE_SUBSCRIPTIONS && currentTab === 'membership' && <MembershipTab notify={showNotice} />}
 
         {/* Tab 3: Dirección & Datos Personales */}
         {currentTab === 'addresses' && (
@@ -1125,82 +875,6 @@ export const AccountPage: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* MODAL: CAMBIAR SABOR DE MEMBRESÍA */}
-      <AnimatePresence>
-        {isChangingFlavor && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsChangingFlavor(false)}
-              className="fixed inset-0 bg-neutral-950/80 backdrop-blur-md"
-            />
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 shadow-2xl z-10 space-y-6"
-            >
-              <div>
-                <h3 className="text-xl font-black font-display uppercase tracking-tight text-white">
-                  Elige el Sabor para tu Próximo Envío
-                </h3>
-                <p className="text-xs text-neutral-400 mt-1">
-                  Tu próximo tarro de PROTEIN X CFM vendrá con el sabor que elijas aquí:
-                </p>
-              </div>
-
-              <div className="space-y-2.5">
-                {FLAVOR_OPTIONS.map((f) => {
-                  const isSelected = selectedNewFlavor === f.id;
-                  return (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setSelectedNewFlavor(f.id)}
-                      className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all ${
-                        isSelected
-                          ? 'bg-neutral-800 border-lime-400 text-white'
-                          : 'bg-neutral-950 border-neutral-800 text-neutral-300 hover:border-neutral-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className="w-4 h-4 rounded-full border border-neutral-700"
-                          style={{ backgroundColor: f.hex }}
-                        />
-                        <span className="text-sm font-bold">{f.name}</span>
-                      </div>
-                      {isSelected && <Check className="w-4 h-4 text-lime-400 stroke-[3]" />}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsChangingFlavor(false)}
-                  className="w-1/2 py-3 px-4 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-300 text-xs font-semibold border border-neutral-700 transition-colors"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleConfirmFlavorChange}
-                  className="w-1/2 py-3 px-4 rounded-xl bg-lime-400 hover:bg-lime-300 text-neutral-950 font-bold font-display uppercase tracking-wider text-xs transition-colors shadow-lg"
-                >
-                  Confirmar Sabor
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };
