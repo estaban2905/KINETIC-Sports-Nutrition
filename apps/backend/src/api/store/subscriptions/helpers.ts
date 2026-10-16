@@ -4,7 +4,8 @@ import { SUBSCRIPTION_MODULE } from "../../../modules/subscription"
 import type SubscriptionModuleService from "../../../modules/subscription/service"
 import { OneclickClient } from "../../../lib/oneclick"
 import { resolveCountyCode } from "../../../modules/fulfillment-chilexpress/coverage"
-import type { ActionDeps } from "../../../lib/subscription-actions"
+import { serializeSubscription, type ActionDeps, type SubscriptionRow } from "../../../lib/subscription-actions"
+import { estimateCycleAmount } from "../../../lib/subscription-order"
 import { sendSubscriptionEmail } from "../../../lib/subscription-notify"
 
 /** El cliente sale del token, nunca de un parámetro o del cuerpo. */
@@ -48,4 +49,43 @@ export function buildActionDeps(req: AuthenticatedMedusaRequest): ActionDeps {
       }
     },
   }
+}
+
+/**
+ * Suscripciones listas para la respuesta: con el nombre del producto y de la
+ * variante y el monto estimado del próximo cobro. Esos datos son un adorno: si
+ * no se pueden calcular, la suscripción igual se devuelve.
+ */
+export async function presentSubscriptions(req: AuthenticatedMedusaRequest, rows: SubscriptionRow[]) {
+  if (!rows.length) return []
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER)
+
+  const labels = new Map<string, { product_title: string | null; variant_title: string | null }>()
+  try {
+    const { data } = await query.graph({
+      entity: "variant",
+      fields: ["id", "title", "product.title"],
+      filters: { id: [...new Set(rows.map((r) => r.variant_id))] },
+    })
+    for (const v of data as any[]) {
+      labels.set(v.id, { product_title: v.product?.title ?? null, variant_title: v.title ?? null })
+    }
+  } catch (err) {
+    logger.warn(`[subscription] no se pudieron leer los nombres de producto: ${err instanceof Error ? err.message : err}`)
+  }
+
+  return Promise.all(
+    rows.map(async (row) => {
+      let next_amount: number | null = null
+      if (row.status !== "cancelled") {
+        try {
+          next_amount = await estimateCycleAmount(req.scope as any, row.id)
+        } catch {
+          next_amount = null
+        }
+      }
+      return serializeSubscription(row, { ...labels.get(row.variant_id), next_amount })
+    })
+  )
 }

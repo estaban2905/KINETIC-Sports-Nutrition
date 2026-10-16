@@ -5,6 +5,7 @@ import {
   parseQuantity,
   parseShippingAddress,
   pauseSubscription,
+  serializeCycle,
   resumeSubscription,
   serializeSubscription,
   updateSubscription,
@@ -92,6 +93,63 @@ describe("serializeSubscription", () => {
     const out = serializeSubscription(row({ payment_token_ref: null, card_last4: null, card_brand: null }))
     expect(out.card).toBeNull()
     expect(out.has_card).toBe(false)
+  })
+})
+
+describe("serializeSubscription: datos para mostrar", () => {
+  it("incluye nombre del producto, variante y monto estimado cuando se conocen", () => {
+    const out = serializeSubscription(row(), {
+      product_title: "GOLD STANDARD 100% WHEY",
+      variant_title: "Double Rich Chocolate / 2 Libras",
+      next_amount: 56092,
+    })
+    expect(out).toMatchObject({
+      product_title: "GOLD STANDARD 100% WHEY",
+      variant_title: "Double Rich Chocolate / 2 Libras",
+      next_amount: 56092,
+    })
+  })
+
+  it("sin esos datos los deja en null", () => {
+    expect(serializeSubscription(row())).toMatchObject({ product_title: null, variant_title: null, next_amount: null })
+  })
+})
+
+describe("serializeCycle: historial en lenguaje de cliente", () => {
+  const cycle = (over = {}) => ({
+    id: "subcyc_1",
+    period_key: "2026-10-28",
+    status: "completed" as const,
+    amount: 56092,
+    order_id: "order_1",
+    error: null,
+    ...over,
+  })
+
+  it("cobrado: muestra monto y pedido", () => {
+    expect(serializeCycle(cycle())).toEqual({
+      id: "subcyc_1",
+      date: "2026-10-28",
+      status: "paid",
+      amount: 56092,
+      order_id: "order_1",
+    })
+  })
+
+  it("rechazado vs saltado por falta de stock", () => {
+    expect(serializeCycle(cycle({ status: "failed", amount: null, order_id: null, error: "rechazado: REJECTED (-1)" })).status).toBe("failed")
+    expect(serializeCycle(cycle({ status: "failed", amount: null, order_id: null, error: "sin_stock" })).status).toBe("skipped")
+  })
+
+  it("en curso o por conciliar se ve como 'processing', sin monto ni pedido", () => {
+    for (const status of ["reserved", "charged_pending_order"] as const) {
+      expect(serializeCycle(cycle({ status }))).toMatchObject({ status: "processing", amount: null, order_id: null })
+    }
+  })
+
+  it("nunca expone el texto técnico del error", () => {
+    const out = serializeCycle(cycle({ status: "failed", error: "error del sistema: AwilixResolutionError" }))
+    expect(JSON.stringify(out)).not.toContain("Awilix")
   })
 })
 

@@ -68,8 +68,16 @@ async function notifyQuietly(deps: ActionDeps, kind: "paused" | "cancelled", sub
 
 // --- Salida ---------------------------------------------------------------------
 
+export type SubscriptionExtras = {
+  /** Nombre legible del producto y de la variante ("Double Rich Chocolate / 2 Libras"). */
+  product_title?: string | null
+  variant_title?: string | null
+  /** Monto estimado del próximo cobro, en pesos. */
+  next_amount?: number | null
+}
+
 /** Lo que ve el cliente: nunca el token de la tarjeta ni el de inscripción. */
-export function serializeSubscription(sub: SubscriptionRow) {
+export function serializeSubscription(sub: SubscriptionRow, extras: SubscriptionExtras = {}) {
   return {
     id: sub.id,
     variant_id: sub.variant_id,
@@ -85,6 +93,38 @@ export function serializeSubscription(sub: SubscriptionRow) {
     shipping_address: sub.shipping_address,
     welcome_gift_given: sub.welcome_gift_given,
     created_at: sub.created_at ?? null,
+    product_title: extras.product_title ?? null,
+    variant_title: extras.variant_title ?? null,
+    next_amount: extras.next_amount ?? null,
+  }
+}
+
+export type CycleRow = {
+  id: string
+  period_key: string
+  status: "reserved" | "charged_pending_order" | "completed" | "failed"
+  amount: number | null
+  order_id: string | null
+  error: string | null
+  attempted_at?: Date | string | null
+}
+
+/**
+ * Historial de cobros en lenguaje de cliente: nunca el texto técnico del error ni
+ * ids internos, solo si se cobró, si se rechazó, si se saltó o si está en curso.
+ */
+export function serializeCycle(cycle: CycleRow) {
+  let status: "paid" | "failed" | "skipped" | "processing"
+  if (cycle.status === "completed") status = "paid"
+  else if (cycle.status === "failed") status = cycle.error === "sin_stock" ? "skipped" : "failed"
+  else status = "processing"
+
+  return {
+    id: cycle.id,
+    date: cycle.period_key,
+    status,
+    amount: status === "paid" ? cycle.amount : null,
+    order_id: status === "paid" ? cycle.order_id : null,
   }
 }
 

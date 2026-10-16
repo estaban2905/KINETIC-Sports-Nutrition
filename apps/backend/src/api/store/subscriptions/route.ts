@@ -1,6 +1,6 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { createSubscription, serializeSubscription } from "../../../lib/subscription-actions"
-import { buildActionDeps, customerIdOf } from "./helpers"
+import { createSubscription } from "../../../lib/subscription-actions"
+import { buildActionDeps, customerIdOf, presentSubscriptions } from "./helpers"
 
 /** Las suscripciones del cliente, la más reciente primero. */
 export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse) {
@@ -10,7 +10,7 @@ export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse) 
     { customer_id: customerId },
     { order: { created_at: "DESC" } }
   )
-  res.json({ subscriptions: rows.map(serializeSubscription) })
+  res.json({ subscriptions: await presentSubscriptions(req, rows) })
 }
 
 /**
@@ -23,5 +23,5 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
     customerIdOf(req),
     (req.body ?? {}) as Record<string, unknown>
   )
-  res.status(201).json({ subscription: serializeSubscription(sub) })
+  res.status(201).json({ subscription: (await presentSubscriptions(req, [sub]))[0] })
 }

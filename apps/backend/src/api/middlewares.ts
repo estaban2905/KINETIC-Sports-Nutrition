@@ -130,6 +130,11 @@ export default defineMiddlewares({
       middlewares: [authenticate("customer", ["session", "bearer"])],
     },
     {
+      matcher: "/store/subscriptions/:id/cycles",
+      method: "GET",
+      middlewares: [authenticate("customer", ["session", "bearer"])],
+    },
+    {
       matcher: "/store/subscriptions/:id/:action",
       method: "POST",
       middlewares: [authenticate("customer", ["session", "bearer"])],
