@@ -156,6 +156,22 @@
           "enumItems": [],
           "mappedType": "text"
         },
+        "inscription_token": {
+          "name": "inscription_token",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
         "card_brand": {
           "name": "card_brand",
           "type": "text",
@@ -330,6 +346,15 @@
           "primary": false,
           "unique": false,
           "expression": "CREATE INDEX IF NOT EXISTS \"IDX_subscription_status_next_billing_date\" ON \"subscription\" (\"status\", \"next_billing_date\") WHERE deleted_at IS NULL"
+        },
+        {
+          "keyName": "IDX_subscription_inscription_token",
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_subscription_inscription_token\" ON \"subscription\" (\"inscription_token\") WHERE deleted_at IS NULL"
         },
         {
           "keyName": "subscription_pkey",

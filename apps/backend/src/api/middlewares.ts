@@ -45,6 +45,19 @@ const orderLookupRateLimit = rateLimit({
 })
 
 /**
+ * La inscripción de tarjeta llama a Transbank en cada petición y el callback es
+ * público (lo invoca el navegador del cliente), así que ambos llevan límite por
+ * IP. Mismo criterio que orderLookupRateLimit: sin Redis es por instancia.
+ */
+const cardEnrollmentRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Demasiados intentos. Intenta de nuevo en unos minutos." },
+})
+
+/**
  * Reports every 5xx to Sentry, then delegates to Medusa's own error handler
  * unchanged — reusing its status-code classification (getHttpResponseFromError)
  * instead of reimplementing it, so this stays additive and doesn't risk
@@ -104,6 +117,16 @@ export default defineMiddlewares({
       matcher: "/store/customers/me",
       method: "POST",
       middlewares: [validateCustomerRut],
+    },
+    {
+      matcher: "/store/subscriptions/card/start",
+      method: "POST",
+      middlewares: [authenticate("customer", ["session", "bearer"]), cardEnrollmentRateLimit],
+    },
+    {
+      matcher: "/hooks/oneclick-inscription",
+      method: ["GET", "POST"],
+      middlewares: [cardEnrollmentRateLimit],
     },
     {
       matcher: "/store/order-lookup",

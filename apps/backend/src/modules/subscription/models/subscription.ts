@@ -21,6 +21,10 @@ const Subscription = model
     discount_percent: model.number().default(15),
     next_billing_date: model.text().nullable(),
     payment_token_ref: model.text().nullable(),
+    // Token de una inscripción de tarjeta en curso (Oneclick). El callback de
+    // Transbank llega sin sesión y solo trae este token; con él se ubica la
+    // suscripción. Se borra apenas se termina o se rechaza la inscripción.
+    inscription_token: model.text().nullable(),
     card_brand: model.text().nullable(),
     card_last4: model.text().nullable(),
     shipping_address: model.json().nullable(),
@@ -28,6 +32,10 @@ const Subscription = model
     terms_accepted_at: model.dateTime().nullable(),
     cancelled_at: model.dateTime().nullable(),
   })
-  .indexes([{ on: ["customer_id"] }, { on: ["status", "next_billing_date"] }])
+  .indexes([
+    { on: ["customer_id"] },
+    { on: ["status", "next_billing_date"] },
+    { on: ["inscription_token"] },
+  ])
 
 export default Subscription
