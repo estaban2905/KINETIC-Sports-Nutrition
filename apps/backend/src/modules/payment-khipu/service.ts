@@ -174,8 +174,12 @@ class KhipuPaymentProviderService extends AbstractPaymentProvider<KhipuOptions> 
       return { status: "error", data: { ...input.data, ...result, amount_mismatch: true } }
     }
 
+    // Khipu is a bank transfer: "done" means the money was already collected,
+    // so report "captured" (Medusa creates the Payment and marks it captured
+    // in one step). Returning "authorized" left the payment "Pending" in the
+    // admin until someone pressed "Capture payment" by hand.
     if (result?.status === "done") {
-      return { status: "authorized", data: { ...input.data, ...result } }
+      return { status: "captured", data: { ...input.data, ...result } }
     }
     if (result?.status === "pending" || result?.status === "verifying") {
       return { status: "pending_authorization", data: { ...input.data, ...result } }
@@ -262,8 +266,10 @@ class KhipuPaymentProviderService extends AbstractPaymentProvider<KhipuOptions> 
 
     const amount = new BigNumber(Number(result?.amount ?? 0))
 
+    // "captured" (PaymentActions.SUCCESSFUL): Medusa authorizes if needed,
+    // captures, and completes the cart if no order exists yet.
     if (result?.status === "done") {
-      return { action: "authorized", data: { session_id: sessionId, amount } }
+      return { action: "captured", data: { session_id: sessionId, amount } }
     }
     if (result?.status === "pending" || result?.status === "verifying") {
       return { action: "pending", data: { session_id: sessionId, amount } }

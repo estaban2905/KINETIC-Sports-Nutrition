@@ -32,6 +32,9 @@ export function getDesiredPaymentProviders(
     "pp_mercadopago_mercadopago",
     "pp_stripe_stripe",
     "pp_khipu_khipu",
+    // Solo cobra suscripciones con un token sellado por el servidor; no es un medio
+    // de pago del checkout (el storefront no lo ofrece, ver CartDrawer).
+    "pp_oneclick_oneclick",
   ]
   return desired.filter((id) => registeredIds.has(id))
 }
@@ -217,23 +220,6 @@ export default async function seedChile({
   logger.info("Seeding Chile shipping options...")
   await createShippingOptionsWorkflow(container).run({
     input: [
-      {
-        name: "Envío Estándar",
-        price_type: "flat",
-        provider_id: "manual_manual",
-        service_zone_id: fulfillmentSet.service_zones[0].id,
-        shipping_profile_id: shippingProfile.id,
-        type: {
-          label: "Estándar",
-          description: "Entrega en 2-4 días hábiles.",
-          code: "standard",
-        },
-        prices: [{ currency_code: "clp", amount: 3990 }],
-        rules: [
-          { attribute: "enabled_in_store", value: "true", operator: "eq" },
-          { attribute: "is_return", value: "false", operator: "eq" },
-        ],
-      },
       {
         name: "Chilexpress",
         // "calculated" invokes ChilexpressFulfillmentProviderService.calculatePrice

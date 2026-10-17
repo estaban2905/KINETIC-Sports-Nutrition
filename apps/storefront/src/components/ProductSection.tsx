@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ShoppingBag, Star, ShieldCheck, Truck, RefreshCw, Check, Zap, Flame, Info, Repeat, Gift } from 'lucide-react';
 import { Product, ProductFlavor, ProductSize } from '../types';
 import { ProteinVisual } from './ProteinVisual';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
+import { ENABLE_SUBSCRIPTIONS, ENABLE_SUBSCRIPTION_GIFT } from '../lib/features';
+import { SubscribeModal } from './SubscribeModal';
+import { subscriptionPrice } from '../lib/subscriptions';
 import {
   getLandingProductSection,
   getLandingGuarantees,
@@ -90,8 +92,8 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
   const [guarantees, setGuarantees] = useState<LandingGuarantee[] | null>(null);
   const [usageTips, setUsageTips] = useState<LandingUsageTip[] | null>(null);
 
-  const navigate = useNavigate();
-  const { isAuthenticated, openAuthModal, subscribeMembership } = useAuth();
+  const [subscribeOpen, setSubscribeOpen] = useState(false);
+  const { isAuthenticated, openAuthModal } = useAuth();
 
   useEffect(() => {
     getLandingProductSection().then(setSection);
@@ -323,6 +325,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
             </div>
 
             {/* Purchase Mode Selector: Compra Única vs Suscripción Mensual 15% OFF */}
+            {ENABLE_SUBSCRIPTIONS && (
             <div className="mt-8 space-y-3">
               <label className="block text-xs font-mono uppercase tracking-wider text-neutral-300">
                 3. Modalidad de Compra:
@@ -369,7 +372,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
                   </div>
                   <div className="flex items-baseline gap-2 mt-1">
                     <span className="text-base font-black font-display text-white">
-                      ${Math.round(currentSize.price * 0.85).toLocaleString('es-CL')}
+                      ${subscriptionPrice(currentSize.price).toLocaleString('es-CL')}
                     </span>
                     <span className="text-[10px] text-neutral-400 font-mono">/ mes</span>
                   </div>
@@ -379,13 +382,15 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
               {/* Subscription perks banner when selected */}
               {purchaseMode === 'subscription' && (
                 <div className="p-3.5 rounded-xl bg-neutral-900/90 border border-lime-400/40 space-y-1.5 text-xs text-neutral-300">
-                  <div className="flex items-center gap-2 text-lime-400 font-bold">
-                    <Gift className="w-4 h-4 flex-shrink-0" />
-                    <span>¡Shaker KINETIC de acero incluido de regalo en tu 1er mes!</span>
-                  </div>
+                  {ENABLE_SUBSCRIPTION_GIFT && (
+                    <div className="flex items-center gap-2 text-lime-400 font-bold">
+                      <Gift className="w-4 h-4 flex-shrink-0" />
+                      <span>¡Shaker KINETIC de acero incluido de regalo en tu 1er mes!</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-neutral-300">
                     <Check className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
-                    <span>Despacho automático cada 30 días con Chilexpress Prioritario (Gratis)</span>
+                    <span>Despacho automático cada 30 días con Chilexpress</span>
                   </div>
                   <div className="flex items-center gap-2 text-neutral-300">
                     <Check className="w-3.5 h-3.5 text-lime-400 flex-shrink-0" />
@@ -394,6 +399,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
                 </div>
               )}
             </div>
+            )}
 
             {/* Quantity Selector & Add to Cart CTA */}
             <div className="mt-8 flex flex-col sm:flex-row items-stretch gap-4">
@@ -419,7 +425,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
               </div>
 
               {/* Add to Cart or Subscribe Button */}
-              {purchaseMode === 'subscription' ? (
+              {ENABLE_SUBSCRIPTIONS && purchaseMode === 'subscription' ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -427,8 +433,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
                       openAuthModal();
                       return;
                     }
-                    subscribeMembership(selectedFlavor.id, selectedFlavor.name);
-                    navigate('/cuenta?tab=membership');
+                    setSubscribeOpen(true);
                   }}
                   className="flex-1 py-4 px-6 rounded-xl bg-lime-400 hover:bg-lime-300 text-neutral-950 font-black font-display text-lg uppercase tracking-wider shadow-[0_0_25px_rgba(163,230,53,0.3)] hover:shadow-[0_0_35px_rgba(163,230,53,0.45)] transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
                 >
@@ -580,6 +585,17 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
         </div>
 
       </div>
+
+      {ENABLE_SUBSCRIPTIONS && (
+        <SubscribeModal
+          open={subscribeOpen}
+          onClose={() => setSubscribeOpen(false)}
+          product={product}
+          flavor={selectedFlavor}
+          size={currentSize}
+          quantity={quantity}
+        />
+      )}
     </section>
   );
 };

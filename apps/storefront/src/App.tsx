@@ -7,6 +7,8 @@ import { OrderConfirmationPage } from './pages/OrderConfirmationPage';
 import { OrderLookupPage } from './pages/OrderLookupPage';
 import { ConfirmCheckoutPage } from './pages/ConfirmCheckoutPage';
 import { AccountPage } from './pages/AccountPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { GoogleCallbackPage } from './pages/GoogleCallbackPage';
 
 export default function App() {
   return (
@@ -19,6 +21,8 @@ export default function App() {
             <Route path="/cuenta" element={<AccountPage />} />
             <Route path="/mi-cuenta" element={<AccountPage />} />
             <Route path="/perfil" element={<AccountPage />} />
+            <Route path="/restablecer" element={<ResetPasswordPage />} />
+            <Route path="/auth/google/callback" element={<GoogleCallbackPage />} />
             <Route path="/pedido/:orderId" element={<OrderConfirmationPage />} />
             <Route path="/seguimiento" element={<OrderLookupPage />} />
             <Route path="/checkout/confirmar" element={<ConfirmCheckoutPage />} />

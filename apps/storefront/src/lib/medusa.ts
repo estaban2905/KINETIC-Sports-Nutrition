@@ -1,10 +1,14 @@
 import Medusa from "@medusajs/js-sdk";
 import { HttpTypes } from "@medusajs/types";
 import { NutritionFact, Product, ProductFlavor, ProductSize } from "../types";
+import type { CustomerStatus } from "./orderStatus";
 
 export const medusa = new Medusa({
   baseUrl: import.meta.env.VITE_MEDUSA_BACKEND_URL || "http://localhost:9000",
   publishableKey: import.meta.env.VITE_MEDUSA_PUBLISHABLE_KEY,
+  // JWT y no cookie de sesión: storefront y backend viven en dominios distintos
+  // (Railway) y la cookie cruzada la bloquea SameSite.
+  auth: { type: "jwt" },
 });
 
 let cachedChileRegion: HttpTypes.StoreRegion | null = null;
@@ -69,6 +73,8 @@ export interface OrderLookupResult {
   id: string;
   display_id: number;
   status: string;
+  /** Single customer-facing status derived by the backend; wording lives in lib/orderStatus.ts. */
+  customer_status: CustomerStatus;
   fulfillment_status: string;
   payment_status: string;
   created_at: string;
@@ -79,6 +85,9 @@ export interface OrderLookupResult {
     shipped_at: string | null;
     delivered_at: string | null;
     labels?: { tracking_number: string; tracking_url: string | null }[];
+    tracking_events?: { at: string | null; description: string }[];
+    tracking_status?: string | null;
+    tracking_certificate_url?: string | null;
   }[];
 }
 

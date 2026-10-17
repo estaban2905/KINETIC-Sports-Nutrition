@@ -99,3 +99,27 @@ describe('isContactFormValid', () => {
     expect(isContactFormValid({ ...validValues, email: 'bad' }, comunas)).toBe(false);
   });
 });
+
+import { contactFromCart } from '../checkoutValidation';
+
+describe('contactFromCart', () => {
+  it('splits the saved address back into the form fields', () => {
+    expect(
+      contactFromCart('a@b.cl', {
+        first_name: 'Ana', last_name: 'Pérez Soto', address_1: 'Av. Los Leones 1234',
+        address_2: 'Depto 301', city: 'Providencia', phone: '+56911112222',
+      })
+    ).toEqual({
+      name: 'Ana Pérez Soto', email: 'a@b.cl', phone: '+56911112222',
+      street: 'Av. Los Leones', streetNumber: '1234', apartment: 'Depto 301', city: 'Providencia',
+    });
+  });
+
+  it('does not duplicate a single-word name', () => {
+    expect(contactFromCart(null, { first_name: 'Ana', last_name: 'Ana' }).name).toBe('Ana');
+  });
+
+  it('returns an empty form when nothing was saved', () => {
+    expect(contactFromCart(undefined, null).street).toBe('');
+  });
+});

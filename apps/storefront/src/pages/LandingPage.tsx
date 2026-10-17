@@ -88,7 +88,13 @@ export function LandingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalog]);
 
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  // /?carrito=1 comes from a cancelled payment: open the cart at checkout once,
+  // then drop the param so later opens start from the cart as usual.
+  const [returnedToCart, setReturnedToCart] = useState(() => new URLSearchParams(window.location.search).get('carrito') === '1');
+  useEffect(() => {
+    if (returnedToCart) window.history.replaceState(null, '', window.location.pathname);
+  }, [returnedToCart]);
+  const [isCartOpen, setIsCartOpen] = useState(returnedToCart);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [showErrorToast, setShowErrorToast] = useState(false);
 
@@ -214,7 +220,8 @@ export function LandingPage() {
         {isCartOpen && (
           <CartDrawer
             isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
+            onClose={() => { setIsCartOpen(false); setReturnedToCart(false); }}
+            startAtCheckout={returnedToCart}
           />
         )}
 

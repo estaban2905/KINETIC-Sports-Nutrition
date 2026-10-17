@@ -80,3 +80,16 @@ describe('currency', () => {
     expect(currency(999.6)).toBe('$1.000');
   });
 });
+
+import { isPromotionApplied } from '../../context/CartContext';
+
+describe('isPromotionApplied', () => {
+  it('matches the code case-insensitively', () => {
+    expect(isPromotionApplied([{ code: 'KINETIC10' }], ' kinetic10 ')).toBe(true);
+  });
+
+  it('is false for other codes or no promotions', () => {
+    expect(isPromotionApplied([{ code: 'OTRO' }], 'KINETIC10')).toBe(false);
+    expect(isPromotionApplied(undefined, 'KINETIC10')).toBe(false);
+  });
+});

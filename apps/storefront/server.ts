@@ -35,6 +35,9 @@ async function startServer() {
                 imgSrc: ["'self'", "data:", "https://images.unsplash.com"],
                 connectSrc: ["'self'", MEDUSA_BACKEND_URL, "https://api.stripe.com"],
                 frameSrc: ["https://js.stripe.com", "https://hooks.stripe.com"],
+                // La inscripción de tarjeta (Oneclick) envía un formulario POST a Transbank;
+                // helmet deja form-action en 'self' por defecto y lo bloquearía.
+                formAction: ["'self'", "https://*.transbank.cl"],
               },
             }
           : false,

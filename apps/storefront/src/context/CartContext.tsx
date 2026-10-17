@@ -3,13 +3,15 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { HttpTypes } from "@medusajs/types";
 import { medusa, getChileRegion, resolveVariantId } from "../lib/medusa";
 import { Product, ProductFlavor, ProductSize } from "../types";
+import { useAuth } from "./AuthContext";
 
-const CART_ID_KEY = "kinetic_cart_id";
+export const CART_ID_KEY = "kinetic_cart_id";
 
 /**
  * `fetch` throws a generic "Failed to fetch" (or similar) when the backend
@@ -17,6 +19,15 @@ const CART_ID_KEY = "kinetic_cart_id";
  * useless to a shopper, so it's replaced with an actionable one instead of
  * being shown as-is.
  */
+/** True when the cart already carries this promo code (case-insensitive). */
+export function isPromotionApplied(
+  promotions: { code?: string | null }[] | undefined,
+  code: string
+): boolean {
+  const wanted = code.trim().toLowerCase();
+  return (promotions ?? []).some((p) => p.code?.toLowerCase() === wanted);
+}
+
 export function describeCartError(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err);
   if (/failed to fetch|networkerror|load failed|ECONNREFUSED/i.test(message)) {
@@ -25,6 +36,15 @@ export function describeCartError(err: unknown): string {
   }
   return message || "No se pudo agregar el producto al carrito.";
 }
+
+/**
+ * A shipping option as listed for the cart. `unavailable` is set on a
+ * "calculated" option (Chilexpress) whose live quote failed or has no service
+ * for the cart's comuna — it has no price and must not be shown as $0.
+ */
+export type CartShippingOption = HttpTypes.StoreCartShippingOption & {
+  unavailable?: boolean;
+};
 
 interface CartContextValue {
   cart: HttpTypes.StoreCart | null;
@@ -41,7 +61,7 @@ interface CartContextValue {
   removeItem: (lineItemId: string) => Promise<void>;
   updateCartDetails: (body: HttpTypes.StoreUpdateCart) => Promise<HttpTypes.StoreCart>;
   addPromotionCode: (code: string) => Promise<{ success: boolean; message: string }>;
-  listShippingOptions: () => Promise<HttpTypes.StoreCartShippingOption[]>;
+  listShippingOptions: () => Promise<CartShippingOption[]>;
   addShippingMethod: (optionId: string) => Promise<void>;
   listPaymentProviders: () => Promise<HttpTypes.StorePaymentProvider[]>;
   initiatePaymentSession: (
@@ -57,6 +77,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<HttpTypes.StoreCart | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user, rememberCheckoutData } = useAuth();
 
   useEffect(() => {
     const cartId = localStorage.getItem(CART_ID_KEY);
@@ -70,6 +91,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(CART_ID_KEY);
       });
   }, []);
+
+  // Al iniciar sesión el carrito del invitado pasa a ser del cliente. Sin esto
+  // el pedido saldría como de invitado y no aparecería en "Mis pedidos".
+  const customerId = user?.id;
+  useEffect(() => {
+    if (!customerId || !cart || cart.customer_id === customerId) return;
+    medusa.store.cart
+      .transferCart(cart.id)
+      .then(({ cart: transferred }) => setCart(transferred))
+      .catch(() => {
+        // No bloquea la compra: el carrito sigue funcionando como invitado.
+      });
+  }, [customerId, cart?.id, cart?.customer_id]);
 
   const ensureCart = useCallback(async (): Promise<HttpTypes.StoreCart> => {
     if (cart) return cart;
@@ -174,6 +208,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addPromotionCode = useCallback(
     async (code: string) => {
       if (!cart) return { success: false, message: "No hay un carrito activo." };
+      if (isPromotionApplied(cart.promotions, code)) {
+        return { success: true, message: "Este cupón ya está aplicado." };
+      }
       const before = cart.promotions?.length ?? 0;
       try {
         const { cart: updated } = await medusa.store.cart.addPromotions(cart.id, {
@@ -208,8 +245,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     // it as-is drops `option.type`, which the storefront's shipping-carrier
     // label depends on (see getShippingCarrierInfo in CartDrawer.tsx). Merge
     // just the calculated price onto the original, fully-loaded option.
-    const withCalculatedPrices = await Promise.all(
-      shipping_options.map(async (option) => {
+    // If the quote fails (no Chilexpress service for the comuna, or the API
+    // stayed down after the backend's retries) the option is flagged
+    // `unavailable` instead of being returned without a price, which the
+    // drawer used to render as "$0".
+    const withCalculatedPrices: CartShippingOption[] = await Promise.all(
+      shipping_options.map(async (option): Promise<CartShippingOption> => {
         if (option.price_type !== "calculated") return option;
         try {
           const { shipping_option } = await medusa.store.fulfillment.calculate(option.id, {
@@ -217,7 +258,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           });
           return { ...option, calculated_price: shipping_option.calculated_price };
         } catch {
-          return option;
+          return { ...option, unavailable: true };
         }
       })
     );
@@ -257,17 +298,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (!cart) throw new Error("No hay un carrito activo.");
     const result = await medusa.store.cart.complete(cart.id);
     if (result.type === "order") {
+      // Con cuenta, lo que el cliente escribió en esta compra queda guardado
+      // para precargarlo la próxima vez (sin esperar: no debe demorar la confirmación).
+      void rememberCheckoutData({
+        address: cart.shipping_address,
+        phone: cart.shipping_address?.phone,
+        billing: (cart.metadata?.billing as Record<string, string> | undefined) ?? null,
+      });
       localStorage.removeItem(CART_ID_KEY);
       setCart(null);
     }
     return result;
-  }, [cart]);
+  }, [cart, rememberCheckoutData]);
 
   const resetCart = useCallback(() => {
     localStorage.removeItem(CART_ID_KEY);
     setCart(null);
     setError(null);
   }, []);
+
+  // Al cerrar sesión se descarta el carrito: pertenece al cliente y no debe
+  // quedar a disposición de quien use el mismo navegador después.
+  const hadCustomer = useRef(false);
+  useEffect(() => {
+    if (customerId) {
+      hadCustomer.current = true;
+    } else if (hadCustomer.current) {
+      hadCustomer.current = false;
+      resetCart();
+    }
+  }, [customerId, resetCart]);
 
   const itemCount =
     cart?.items?.reduce((acc, item) => acc + item.quantity, 0) ?? 0;

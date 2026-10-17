@@ -1,4 +1,5 @@
 import {
+  authenticate,
   clearFiltersByKey,
   defineMiddlewares,
   errorHandler,
@@ -9,6 +10,7 @@ import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusaj
 import { rateLimit } from "express-rate-limit"
 import { listProductQueryConfig } from "@medusajs/medusa/api/store/products/query-config"
 import { StoreGetProductsParams } from "@medusajs/medusa/api/store/products/validators"
+import { assertValidCustomerRut } from "../lib/customer-rut"
 import { Sentry } from "../lib/sentry"
 
 /**
@@ -43,6 +45,19 @@ const orderLookupRateLimit = rateLimit({
 })
 
 /**
+ * La inscripción de tarjeta llama a Transbank en cada petición y el callback es
+ * público (lo invoca el navegador del cliente), así que ambos llevan límite por
+ * IP. Mismo criterio que orderLookupRateLimit: sin Redis es por instancia.
+ */
+const cardEnrollmentRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Demasiados intentos. Intenta de nuevo en unos minutos." },
+})
+
+/**
  * Reports every 5xx to Sentry, then delegates to Medusa's own error handler
  * unchanged — reusing its status-code classification (getHttpResponseFromError)
  * instead of reimplementing it, so this stays additive and doesn't risk
@@ -65,8 +80,75 @@ function reportingErrorHandler(
   return coreErrorHandler(err as any, req, res, next)
 }
 
+/**
+ * Valida metadata.rut al crear o actualizar el perfil del cliente. Solo
+ * rechaza: la ruta de Medusa ya parsea el body con su propio validador, así
+ * que normalizar acá no sería confiable (el formulario manda el RUT ya formateado).
+ */
+function validateCustomerRut(req: MedusaRequest, _res: MedusaResponse, next: MedusaNextFunction) {
+  try {
+    assertValidCustomerRut(req.body)
+    next()
+  } catch (err) {
+    next(err)
+  }
+}
+
 export default defineMiddlewares({
   routes: [
+    {
+      // Solo clientes con sesión/token. El cliente sale del token, nunca de un parámetro.
+      matcher: "/store/customers/me/orders",
+      method: "GET",
+      middlewares: [authenticate("customer", ["session", "bearer"])],
+    },
+    {
+      // Token de Google recién obtenido: todavía no tiene cliente asociado.
+      matcher: "/store/google-link",
+      method: "POST",
+      middlewares: [authenticate("customer", ["bearer"], { allowUnregistered: true })],
+    },
+    {
+      matcher: "/store/customers",
+      method: "POST",
+      middlewares: [validateCustomerRut],
+    },
+    {
+      matcher: "/store/customers/me",
+      method: "POST",
+      middlewares: [validateCustomerRut],
+    },
+    {
+      // Todas las rutas de suscripción exigen sesión; el cliente sale del token.
+      matcher: "/store/subscriptions",
+      method: ["GET", "POST"],
+      middlewares: [authenticate("customer", ["session", "bearer"])],
+    },
+    {
+      matcher: "/store/subscriptions/:id",
+      method: ["GET", "PATCH"],
+      middlewares: [authenticate("customer", ["session", "bearer"])],
+    },
+    {
+      matcher: "/store/subscriptions/:id/cycles",
+      method: "GET",
+      middlewares: [authenticate("customer", ["session", "bearer"])],
+    },
+    {
+      matcher: "/store/subscriptions/:id/:action",
+      method: "POST",
+      middlewares: [authenticate("customer", ["session", "bearer"])],
+    },
+    {
+      matcher: "/store/subscriptions/card/start",
+      method: "POST",
+      middlewares: [authenticate("customer", ["session", "bearer"]), cardEnrollmentRateLimit],
+    },
+    {
+      matcher: "/hooks/oneclick-inscription",
+      method: ["GET", "POST"],
+      middlewares: [cardEnrollmentRateLimit],
+    },
     {
       matcher: "/store/order-lookup",
       method: "POST",

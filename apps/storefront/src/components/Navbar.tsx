@@ -4,6 +4,8 @@ import { ShoppingBag, Menu, X, Zap, ChevronRight, User as UserIcon, Package, Rep
 import { Link } from 'react-router-dom';
 import { LandingSettings, LandingNavLink, getLandingNavLinks } from '../lib/landing';
 import { useAuth } from '../context/AuthContext';
+import { hasActiveSubscription } from '../lib/subscriptions';
+import { ENABLE_ACCOUNTS } from '../lib/features';
 
 interface NavbarProps {
   cartCount: number;
@@ -24,7 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings 
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [navLinksData, setNavLinksData] = useState<LandingNavLink[] | null>(null);
-  const { user, isAuthenticated, openAuthModal } = useAuth();
+  const { user, isAuthenticated, openAuthModal, subscriptions } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -116,7 +118,7 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings 
             </a>
 
             {/* User Account / Login Button */}
-            {isAuthenticated && user ? (
+            {!ENABLE_ACCOUNTS ? null : isAuthenticated && user ? (
               <Link
                 to="/cuenta"
                 className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-neutral-900 border border-neutral-700 hover:border-lime-400 text-neutral-200 hover:text-white transition-all group"
@@ -130,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings 
                 <span className="hidden lg:inline text-xs font-semibold max-w-[100px] truncate">
                   {user.name.split(' ')[0]}
                 </span>
-                {user.membership?.status === 'active' && (
+                {hasActiveSubscription(subscriptions) && (
                   <span className="hidden sm:inline-block w-2 h-2 rounded-full bg-lime-400" />
                 )}
               </Link>
@@ -201,7 +203,7 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings 
               ))}
 
               {/* Account Link in Mobile */}
-              {isAuthenticated && user ? (
+              {!ENABLE_ACCOUNTS ? null : isAuthenticated && user ? (
                 <Link
                   to="/cuenta"
                   onClick={() => setMobileMenuOpen(false)}
@@ -228,7 +230,7 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings 
                 >
                   <div className="flex items-center gap-2">
                     <UserIcon className="w-4 h-4" />
-                    <span>Iniciar Sesión con Google</span>
+                    <span>Iniciar sesión</span>
                   </div>
                   <ChevronRight className="w-4 h-4" />
                 </button>

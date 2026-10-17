@@ -8,15 +8,22 @@ import {
 } from 'lucide-react';
 import { HttpTypes } from '@medusajs/types';
 import type { Stripe, StripeCardElement } from '@stripe/stripe-js';
-import { useCart } from '../context/CartContext';
+import { useCart, type CartShippingOption } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { getStripe } from '../lib/stripe';
 import { listComunas } from '../lib/medusa';
-import { validateContactForm, type ContactFormValues } from '../lib/checkoutValidation';
+import {
+  billingFromCart, billingToMetadata, contactFromCart, contactFromCustomer, formatRut, validateBillingForm, validateContactForm,
+  type BillingFormValues, type ContactFormValues,
+} from '../lib/checkoutValidation';
+import { billingFromCustomer } from '../lib/accountData';
 import { ComunaAutocomplete } from './ComunaAutocomplete';
 
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Open straight at the address step (e.g. coming back from a cancelled payment). */
+  startAtCheckout?: boolean;
 }
 
 type CheckoutStep = 'cart' | 'address' | 'shipping' | 'payment';
@@ -66,7 +73,7 @@ export function isAllowedPaymentProvider(
   return allowed.some((id) => providerId.includes(id));
 }
 
-export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
+export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAtCheckout = false }) => {
   const {
     cart,
     updateItemQuantity,
@@ -80,30 +87,92 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     completeCart,
   } = useCart();
   const navigate = useNavigate();
+  const { user, addresses: customerAddresses } = useAuth();
 
-  const [step, setStep] = useState<CheckoutStep>('cart');
+  const [step, setStep] = useState<CheckoutStep>(startAtCheckout && (cart?.items?.length ?? 0) > 0 ? 'address' : 'cart');
   const [couponCode, setCouponCode] = useState('');
   const [couponFeedback, setCouponFeedback] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
 
-  const [contact, setContact] = useState<ContactFormValues>({
-    name: '', email: '', phone: '', street: '', streetNumber: '', apartment: '', city: '',
-  });
+  // Prefilled from the cart: the drawer unmounts on close, so local state alone
+  // would lose the customer's address every time.
+  const [contact, setContact] = useState<ContactFormValues>(() =>
+    contactFromCart(cart?.email, cart?.shipping_address)
+  );
+  // Medusa crea el carrito con un shipping_address casi vacío (solo el país):
+  // cuenta como "ya tiene dirección" únicamente si trae calle o nombre.
+  const cartHasAddress = (a: { address_1?: string | null; first_name?: string | null } | null | undefined) => !!(a?.address_1 || a?.first_name);
+  const contactPrefilled = useRef(cartHasAddress(cart?.shipping_address));
+  useEffect(() => {
+    // The cart can arrive after the drawer mounts (page just loaded).
+    if (contactPrefilled.current || !cart || !cartHasAddress(cart.shipping_address)) return;
+    contactPrefilled.current = true;
+    setContact(contactFromCart(cart.email, cart.shipping_address));
+  }, [cart?.email, cart?.shipping_address]);
+
+  // Cliente con sesión y carrito sin dirección todavía: se precarga con sus
+  // datos y su dirección guardada. Lo que ya está en el carrito tiene prioridad.
+  const customerPrefilled = useRef(false);
+  useEffect(() => {
+    if (customerPrefilled.current || contactPrefilled.current || !user) return;
+    // Las direcciones llegan después que el perfil: se vuelve a correr cuando
+    // aparecen, salvo que el formulario ya tenga calle (la escribió el cliente).
+    customerPrefilled.current = customerAddresses.length > 0;
+    setContact((prev) =>
+      prev.street
+        ? prev
+        : contactFromCustomer({
+            email: user.email,
+            first_name: user.name,
+            phone: user.phone,
+            addresses: customerAddresses,
+          })
+    );
+  }, [user, customerAddresses]);
   const [touched, setTouched] = useState<Partial<Record<keyof ContactFormValues, boolean>>>({});
   const [comunas, setComunas] = useState<string[]>([]);
   const contactErrors = validateContactForm(contact, comunas);
   const markTouched = (field: keyof ContactFormValues) => setTouched((t) => ({ ...t, [field]: true }));
 
+  // Boleta (default) or factura: a factura needs the company's data, kept in
+  // cart.metadata.billing and read by the backend when it emits the document.
+  const [billing, setBilling] = useState<BillingFormValues>(() => billingFromCart(cart?.metadata));
+  const [billingTouched, setBillingTouched] = useState<Partial<Record<keyof BillingFormValues, boolean>>>({});
+  const billingErrors = validateBillingForm(billing);
+  const markBillingTouched = (field: keyof BillingFormValues) => setBillingTouched((t) => ({ ...t, [field]: true }));
+
+  // Datos de factura de una compra anterior: se precargan los campos, pero el
+  // documento sigue siendo boleta hasta que el cliente elija factura.
+  const billingPrefilled = useRef(false);
+  useEffect(() => {
+    if (billingPrefilled.current || !user?.billing) return;
+    billingPrefilled.current = true;
+    setBilling((prev) => (prev.rut || prev.razonSocial ? prev : { ...billingFromCustomer(user.billing), tipo: prev.tipo }));
+  }, [user?.billing]);
+
   useEffect(() => {
     listComunas().then(setComunas);
   }, []);
-  const [shippingOptions, setShippingOptions] = useState<HttpTypes.StoreCartShippingOption[]>([]);
+  const [shippingOptions, setShippingOptions] = useState<CartShippingOption[]>([]);
   const [selectedShippingOption, setSelectedShippingOption] = useState<string | null>(null);
   const [paymentProviders, setPaymentProviders] = useState<HttpTypes.StorePaymentProvider[]>([]);
+  const [providersStatus, setProvidersStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [providersAttempt, setProvidersAttempt] = useState(0);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
+  const payLock = useRef(false);
+
+  // Keyboard/screen-reader users lose their place when the step's content is
+  // swapped out: move focus to the new step's title (not on first render).
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const previousStep = useRef(step);
+  useEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    titleRef.current?.focus();
+  }, [step]);
   const stripeCardContainerRef = useRef<HTMLDivElement>(null);
   const stripeRef = useRef<Stripe | null>(null);
   const stripeCardRef = useRef<StripeCardElement | null>(null);
@@ -128,16 +197,24 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    if (step !== 'shipping' || !cart) return;
-    listShippingOptions().then(setShippingOptions).catch(() => setShippingOptions([]));
-  }, [step, cart, listShippingOptions]);
-
-  useEffect(() => {
     if (step !== 'payment') return;
+    let cancelled = false;
+    setProvidersStatus('loading');
     listPaymentProviders()
-      .then((providers) => setPaymentProviders(providers.filter((p) => isAllowedPaymentProvider(p.id))))
-      .catch(() => setPaymentProviders([]));
-  }, [step, listPaymentProviders]);
+      .then((providers) => {
+        if (cancelled) return;
+        setPaymentProviders(providers.filter((p) => isAllowedPaymentProvider(p.id)));
+        setProvidersStatus('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPaymentProviders([]);
+        setProvidersStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [step, listPaymentProviders, providersAttempt]);
 
   // Stripe requires collecting the card client-side (PCI compliance) before
   // authorizePayment on the backend can confirm the PaymentIntent.
@@ -169,10 +246,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const shippingTotal = cart?.shipping_total ?? 0;
   const total = cart?.total ?? 0;
   const hasShippingMethod = (cart?.shipping_methods?.length ?? 0) > 0;
+  // The highlighted option comes from the cart itself when the customer
+  // hasn't clicked one in this session (e.g. after going back and forth), so
+  // "Continuar a Pago" is never enabled with nothing visibly selected.
+  const activeShippingOptionId =
+    selectedShippingOption ?? cart?.shipping_methods?.[0]?.shipping_option_id ?? null;
 
-  const freeShippingThreshold = 50000;
-  const missingForFreeShipping = Math.max(0, freeShippingThreshold - itemSubtotal);
-  const freeShippingProgress = Math.min(100, (itemSubtotal / freeShippingThreshold) * 100);
 
   const applyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,10 +263,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
   const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (Object.keys(contactErrors).length > 0) {
+    if (Object.keys(contactErrors).length > 0 || Object.keys(billingErrors).length > 0) {
       setTouched({
         name: true, email: true, phone: true, street: true, streetNumber: true, city: true,
       });
+      setBillingTouched({ rut: true, razonSocial: true, giro: true, direccion: true, comuna: true });
+      setCheckoutError('Completa los campos marcados en rojo para continuar.');
+      // Errors render after the state update; then move focus to the first one.
+      const form = e.currentTarget;
+      requestAnimationFrame(() => form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus());
       return;
     }
     setIsSubmitting(true);
@@ -196,6 +280,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
       const [first_name, ...rest] = contact.name.trim().split(' ');
       await updateCartDetails({
         email: contact.email,
+        metadata: { billing: billingToMetadata(billing) },
         shipping_address: {
           first_name: first_name || contact.name,
           last_name: rest.join(' ') || first_name || contact.name,
@@ -206,9 +291,30 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
           phone: contact.phone.trim(),
         },
       });
-      setStep('shipping');
     } catch {
       setCheckoutError('No pudimos guardar tu dirección. Intenta de nuevo.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // The address is saved: quote the shipping options now, so a comuna
+    // Chilexpress can't serve is reported here instead of at the shipping
+    // step (or worse, after payment). The shipping step reuses this result.
+    try {
+      const options = await listShippingOptions();
+      const chilexpressUnavailable = options.some(
+        (option) => option.type?.code === 'chilexpress' && option.unavailable
+      );
+      if (chilexpressUnavailable) {
+        setCheckoutError(
+          'Chilexpress no tiene cobertura para tu comuna o no pudimos cotizar el envío. Revisa la comuna o intenta de nuevo.'
+        );
+        return;
+      }
+      setShippingOptions(options);
+      setStep('shipping');
+    } catch {
+      setCheckoutError('No pudimos verificar la cobertura de envío. Intenta de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -229,7 +335,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   };
 
   const handlePay = async () => {
-    if (!selectedProvider) return;
+    // Synchronous lock: a second click can land before React re-renders the
+    // button as disabled, which would open a second payment session.
+    if (!selectedProvider || payLock.current) return;
+    payLock.current = true;
+    let redirecting = false;
     setIsSubmitting(true);
     setCheckoutError(null);
     try {
@@ -244,6 +354,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
       // esto y se completa directo.
       const redirectUrl = sessionData?.init_point ?? sessionData?.url;
       if (typeof redirectUrl === 'string') {
+        // Stay locked while the browser leaves for the provider's page.
+        redirecting = true;
         window.location.href = redirectUrl;
         return;
       }
@@ -279,7 +391,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
       Sentry.captureException(err);
       setCheckoutError(err instanceof Error ? err.message : 'No pudimos procesar el pago.');
     } finally {
-      setIsSubmitting(false);
+      if (!redirecting) {
+        payLock.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -338,7 +453,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     <ShoppingBag className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 id="cart-drawer-title" className="font-bold text-lg uppercase font-display tracking-wide text-white">
+                    <h3 ref={titleRef} tabIndex={-1} id="cart-drawer-title" className="font-bold text-lg uppercase font-display tracking-wide text-white focus:outline-none">
                       {stepTitle[step]}
                     </h3>
                     {step === 'cart' && (
@@ -357,29 +472,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-
-              {/* Free Shipping Progress Bar */}
-              {step === 'cart' && (
-                <div className="bg-neutral-900/90 px-5 py-3 border-b border-neutral-800 text-xs">
-                  <div className="flex items-center justify-between mb-1.5 font-mono">
-                    <span className="flex items-center gap-1.5 text-neutral-300">
-                      <Truck className="w-3.5 h-3.5 text-lime-400" />
-                      {missingForFreeShipping === 0 ? (
-                        <span className="text-lime-400 font-bold">¡Tienes Envío Gratis Desbloqueado!</span>
-                      ) : (
-                        <span>Faltan <strong className="text-white">{currency(missingForFreeShipping)}</strong> para Envío Gratis</span>
-                      )}
-                    </span>
-                    <span className="text-neutral-400 font-bold">{freeShippingProgress.toFixed(0)}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-lime-500 to-lime-300 transition-all duration-300"
-                      style={{ width: `${freeShippingProgress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
 
               {/* Body */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -467,7 +559,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                 )}
 
                 {step === 'address' && (
-                  <form onSubmit={handleAddressSubmit} className="space-y-3">
+                  <form onSubmit={handleAddressSubmit} noValidate className="space-y-3">
                     <Field
                       label="Nombre Completo" value={contact.name} placeholder="Ej: Matías Silva" autoComplete="name"
                       onChange={(v) => setContact({ ...contact, name: v })}
@@ -514,11 +606,70 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       error={touched.city ? contactErrors.city : undefined}
                     />
 
+                    <div className="pt-1">
+                      <p className="block text-[11px] font-mono uppercase text-neutral-400 mb-1">Documento tributario</p>
+                      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Documento tributario">
+                        {(['boleta', 'factura'] as const).map((tipo) => (
+                          <button
+                            key={tipo}
+                            type="button"
+                            role="radio"
+                            aria-checked={billing.tipo === tipo}
+                            onClick={() => setBilling({ ...billing, tipo })}
+                            className={`py-2.5 rounded-lg border text-xs font-bold uppercase font-display tracking-wider transition-colors ${
+                              billing.tipo === tipo
+                                ? 'border-lime-400 bg-lime-400/10 text-lime-400'
+                                : 'border-neutral-800 bg-neutral-900/70 text-neutral-400 hover:border-neutral-600'
+                            }`}
+                          >
+                            {tipo === 'boleta' ? 'Boleta' : 'Factura'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {billing.tipo === 'factura' && (
+                      <div className="space-y-3 p-3 rounded-xl border border-neutral-800 bg-neutral-900/40">
+                        <Field
+                          label="RUT de la empresa" value={billing.rut} placeholder="76.123.456-0" autoComplete="off"
+                          onChange={(v) => setBilling({ ...billing, rut: formatRut(v) })}
+                          onBlur={() => markBillingTouched('rut')}
+                          error={billingTouched.rut ? billingErrors.rut : undefined}
+                        />
+                        <Field
+                          label="Razón social" value={billing.razonSocial} placeholder="Mi Empresa SpA" autoComplete="organization"
+                          onChange={(v) => setBilling({ ...billing, razonSocial: v })}
+                          onBlur={() => markBillingTouched('razonSocial')}
+                          error={billingTouched.razonSocial ? billingErrors.razonSocial : undefined}
+                        />
+                        <Field
+                          label="Giro" value={billing.giro} placeholder="Ej: Venta de artículos deportivos" autoComplete="off"
+                          onChange={(v) => setBilling({ ...billing, giro: v })}
+                          onBlur={() => markBillingTouched('giro')}
+                          error={billingTouched.giro ? billingErrors.giro : undefined}
+                        />
+                        <Field
+                          label="Dirección de facturación" value={billing.direccion} placeholder="Av. Providencia 1234" autoComplete="off"
+                          onChange={(v) => setBilling({ ...billing, direccion: v })}
+                          onBlur={() => markBillingTouched('direccion')}
+                          error={billingTouched.direccion ? billingErrors.direccion : undefined}
+                        />
+                        <Field
+                          label="Comuna" value={billing.comuna} placeholder="Providencia" autoComplete="off"
+                          onChange={(v) => setBilling({ ...billing, comuna: v })}
+                          onBlur={() => markBillingTouched('comuna')}
+                          error={billingTouched.comuna ? billingErrors.comuna : undefined}
+                        />
+                        <p className="text-[11px] text-neutral-500">
+                          Te enviaremos la factura al correo de contacto de arriba.
+                        </p>
+                      </div>
+                    )}
+
                     {checkoutError && <p className="text-rose-400 text-xs">{checkoutError}</p>}
 
                     <SubmitButton
                       loading={isSubmitting}
-                      disabled={Object.keys(contactErrors).length > 0}
                       label="Continuar a Envío"
                     />
                   </form>
@@ -527,7 +678,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                 {step === 'shipping' && (
                   <div className="space-y-3">
                     {shippingOptions.length === 0 ? (
-                      <p className="text-neutral-500 text-xs">Cargando opciones de envío...</p>
+                      <p className="text-neutral-500 text-xs">No hay opciones de envío disponibles para tu dirección.</p>
                     ) : (
                       shippingOptions.map((option) => {
                         const carrier = getShippingCarrierInfo(option);
@@ -537,9 +688,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                             key={option.id}
                             type="button"
                             onClick={() => handleSelectShippingOption(option.id)}
-                            disabled={isSubmitting}
-                            className={`w-full flex items-start justify-between gap-3 p-4 rounded-xl border text-left transition-colors ${
-                              selectedShippingOption === option.id
+                            disabled={isSubmitting || option.unavailable}
+                            className={`w-full flex items-start justify-between gap-3 p-4 rounded-xl border text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                              activeShippingOptionId === option.id
                                 ? 'border-lime-400 bg-lime-400/10'
                                 : 'border-neutral-800 bg-neutral-900/70 hover:border-neutral-600'
                             }`}
@@ -558,9 +709,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                                 </p>
                               )}
                             </div>
-                            <span className="text-lime-400 font-mono text-sm font-bold whitespace-nowrap">
-                              {currency(option.calculated_price?.calculated_amount ?? 0)}
-                            </span>
+                            {option.unavailable ? (
+                              <span className="text-rose-400 font-mono text-xs font-bold whitespace-nowrap">
+                                Sin cobertura
+                              </span>
+                            ) : (
+                              <span className="text-lime-400 font-mono text-sm font-bold whitespace-nowrap">
+                                {currency(option.calculated_price?.calculated_amount ?? 0)}
+                              </span>
+                            )}
                           </button>
                         );
                       })
@@ -570,7 +727,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
                     <SubmitButton
                       loading={isSubmitting}
-                      disabled={!hasShippingMethod}
+                      disabled={!hasShippingMethod || !activeShippingOptionId}
                       label="Continuar a Pago"
                       onClick={() => setStep('payment')}
                     />
@@ -579,8 +736,23 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
                 {step === 'payment' && (
                   <div className="space-y-3">
-                    {paymentProviders.length === 0 ? (
+                    {providersStatus === 'loading' ? (
                       <p className="text-neutral-500 text-xs">Cargando métodos de pago...</p>
+                    ) : providersStatus === 'error' || paymentProviders.length === 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-rose-400 text-xs">
+                          {providersStatus === 'error'
+                            ? 'No pudimos cargar los métodos de pago.'
+                            : 'No hay métodos de pago disponibles por ahora.'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setProvidersAttempt((n) => n + 1)}
+                          className="text-lime-400 text-xs underline"
+                        >
+                          Reintentar
+                        </button>
+                      </div>
                     ) : (
                       paymentProviders.map((provider) => (
                         <button
@@ -705,14 +877,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 };
 
 /**
- * The storefront only ever offers two shipping options today (see
- * seed-chile.ts): "Envío Estándar" runs on Medusa's built-in `manual_manual`
- * fulfillment provider — a flat price with zero courier behind it, no
- * automatic label/tracking. Someone at KINETIC has to physically hand the
- * package to whatever courier they choose and paste a tracking number into
- * the order manually if they want one. "Chilexpress" is the only option
- * actually backed by a real carrier with a live quote and (once
- * createFulfillment is implemented) an automatic tracking number.
+ * The storefront's only seeded shipping option is "Chilexpress" (see
+ * seed-chile.ts), backed by a real carrier with a live quote and an automatic
+ * tracking number. Any other option (e.g. one added by hand in the admin on
+ * Medusa's `manual_manual` provider) has no courier behind it: someone at
+ * KINETIC has to hand the package over and paste a tracking number manually.
  */
 function getShippingCarrierInfo(
   option: HttpTypes.StoreCartShippingOption
@@ -749,6 +918,7 @@ function Field({
       <label className="block text-[11px] font-mono uppercase text-neutral-400 mb-1">{label}</label>
       <input
         required
+        aria-invalid={!!error}
         type={type}
         autoComplete={autoComplete}
         value={value}

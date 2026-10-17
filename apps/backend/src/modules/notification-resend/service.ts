@@ -39,6 +39,10 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
       to: notification.to,
       subject: notification.content?.subject ?? "Notificación de KINETIC Sports Nutrition",
       html: notification.content?.html ?? notification.content?.text ?? "",
+      // Medusa passes attachment content as base64, which is what Resend expects.
+      ...(notification.attachments?.length
+        ? { attachments: notification.attachments.map((a) => ({ filename: a.filename, content: a.content })) }
+        : {}),
     })
 
     if (error) {

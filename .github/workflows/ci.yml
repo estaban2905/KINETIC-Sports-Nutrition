@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 # A newer push to main cancels an in-flight PR run, but never an in-flight
 # deploy — cancelling `railway up` halfway could leave a half-rolled release.
@@ -49,6 +49,35 @@ jobs:
       - name: Build
         run: npm run build -w apps/storefront
 
+  sonar:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    # La rama principal de SonarCloud es "main" (plan gratis solo analiza esa);
+    # el resto del trabajo se analiza a través de pull requests.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Backend coverage
+        working-directory: apps/backend
+        run: TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules npx jest --silent --runInBand --forceExit --coverage --coverageReporters=lcov --collectCoverageFrom='src/**/*.ts'
+      - name: Storefront coverage
+        working-directory: apps/storefront
+        run: npx vitest run --coverage
+      - name: Normalizar rutas de cobertura
+        run: |
+          sed -i 's#^SF:#SF:apps/backend/#' apps/backend/coverage/lcov.info
+          sed -i 's#^SF:#SF:apps/storefront/#' apps/storefront/coverage/lcov.info
+      - uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
   docker:
     name: Docker build (${{ matrix.app }})
     runs-on: ubuntu-latest
@@ -68,44 +97,36 @@ jobs:
           push: false
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,scope=${{ matrix.app }},mode=max
-
-  # ---------------------------------------------------------------------------
-  # CD — only on push to main, and only after every CI job above is green.
-  # Needs these GitHub secrets (Settings > Secrets and variables > Actions):
-  #   RAILWAY_TOKEN  Project token (Railway > Project > Settings > Tokens),
-  #                  scoped to the `production` environment.
-  # Service names below must match the Railway service names exactly.
-  # Backend goes first: its predeploy runs `medusa db:migrate`, and the
-  # storefront (which bakes the backend URL/publishable key at build time)
-  # should only roll out against an already-migrated backend.
-  # ---------------------------------------------------------------------------
+          
   deploy-backend:
     name: Deploy backend
     needs: [backend, storefront, docker]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      DEPLOY_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Deploy to Railway
-        run: npx --yes @railway/cli@latest up --ci --service backend --environment production
+        run: npx --yes @railway/cli@5.64.2 up --ci --service backend --environment "$DEPLOY_ENV"
 
   deploy-storefront:
     name: Deploy storefront
     needs: deploy-backend
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      DEPLOY_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'develop' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Deploy to Railway
-        run: npx --yes @railway/cli@latest up --ci --service storefront --environment production
+        run: npx --yes @railway/cli@5.64.2 up --ci --service storefront --environment "$DEPLOY_ENV"

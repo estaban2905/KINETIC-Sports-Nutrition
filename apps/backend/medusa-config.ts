@@ -1,4 +1,4 @@
-import { loadEnv, defineConfig } from '@medusajs/framework/utils'
+import { loadEnv, defineConfig, Modules, ContainerRegistrationKeys } from '@medusajs/framework/utils'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
@@ -90,6 +90,25 @@ if (process.env.KHIPU_API_KEY) {
   })
 }
 
+// Oneclick (cobro de suscripciones). Sin credenciales usa las de integración de
+// Transbank, pero en producción solo se registra si están todas configuradas,
+// para que su validateOptions no tumbe el arranque de todo el backend.
+if (
+  process.env.ONECLICK_ENVIRONMENT !== "production" ||
+  (process.env.ONECLICK_COMMERCE_CODE && process.env.ONECLICK_CHILD_COMMERCE_CODE && process.env.ONECLICK_API_KEY)
+) {
+  paymentProviders.push({
+    resolve: "./src/modules/payment-oneclick",
+    id: "oneclick",
+    options: {
+      environment: process.env.ONECLICK_ENVIRONMENT || "integration",
+      commerceCode: process.env.ONECLICK_COMMERCE_CODE,
+      childCommerceCode: process.env.ONECLICK_CHILD_COMMERCE_CODE,
+      apiKey: process.env.ONECLICK_API_KEY,
+    },
+  })
+}
+
 const notificationProviders: Record<string, unknown>[] = [
   // Preserves Medusa's default local/feed notification provider (admin UI feed).
   {
@@ -114,6 +133,34 @@ if (process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL) {
   })
 }
 
+if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
+  console.warn(
+    "[email] RESEND_API_KEY / RESEND_FROM_EMAIL no están configurados: los clientes NO recibirán correos de la tienda (confirmación, envío, entrega)."
+  )
+}
+
+// Al declarar el módulo auth hay que listar también emailpass: si no, deja de
+// existir el login con correo y contraseña. Google solo se registra con sus
+// tres variables (el proveedor lanza error al arrancar si falta alguna).
+const authProviders: Record<string, unknown>[] = [
+  {
+    resolve: "@medusajs/medusa/auth-emailpass",
+    id: "emailpass",
+  },
+]
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_CALLBACK_URL) {
+  authProviders.push({
+    resolve: "@medusajs/medusa/auth-google",
+    id: "google",
+    options: {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackUrl: process.env.GOOGLE_CALLBACK_URL,
+    },
+  })
+}
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -131,6 +178,34 @@ module.exports = defineConfig({
     },
     {
       resolve: "./src/modules/product-content",
+    },
+    {
+      resolve: "./src/modules/invoicing",
+    },
+    {
+      resolve: "./src/modules/subscription",
+    },
+    {
+      // Candados compartidos vía PostgreSQL (sin necesitar Redis): evitan que dos
+      // procesos o instancias hagan a la vez algo que no se puede repetir, como
+      // emitir una boleta (ver lib/order-lock.ts).
+      resolve: "@medusajs/medusa/locking",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/medusa/locking-postgres",
+            id: "locking-postgres",
+            is_default: true,
+          },
+        ],
+      },
+    },
+    {
+      resolve: "@medusajs/medusa/auth",
+      dependencies: [Modules.CACHE, ContainerRegistrationKeys.LOGGER],
+      options: {
+        providers: authProviders,
+      },
     },
     {
       resolve: "@medusajs/medusa/payment",
@@ -161,6 +236,25 @@ module.exports = defineConfig({
               // the customer's comuna to a countyCode before rating.
               coberturaApiKey: process.env.CHILEXPRESS_COBERTURA_API_KEY,
               coberturaBaseUrl: process.env.CHILEXPRESS_COBERTURA_BASE_URL,
+              // Envíos API: creates the transport order (tracking number +
+              // label) when "Create fulfillment" is pressed in the admin.
+              envios: process.env.CHILEXPRESS_ENVIOS_API_KEY
+                ? {
+                    apiKey: process.env.CHILEXPRESS_ENVIOS_API_KEY,
+                    baseUrl: process.env.CHILEXPRESS_ENVIOS_BASE_URL,
+                    customerCardNumber: process.env.CHILEXPRESS_TCC,
+                    rut: process.env.CHILEXPRESS_RUT,
+                  }
+                : undefined,
+              sender: {
+                name: process.env.CHILEXPRESS_SENDER_NAME,
+                phone: process.env.CHILEXPRESS_SENDER_PHONE,
+                email: process.env.CHILEXPRESS_SENDER_EMAIL,
+                address: process.env.CHILEXPRESS_ORIGIN_STREET
+                  ? `${process.env.CHILEXPRESS_ORIGIN_STREET} ${process.env.CHILEXPRESS_ORIGIN_STREET_NUMBER ?? ""}`.trim()
+                  : undefined,
+                coverageCode: process.env.CHILEXPRESS_ORIGIN_CODE,
+              },
             },
           },
         ],
