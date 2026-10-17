@@ -49,7 +49,7 @@ type OneclickOptions = Partial<OneclickConfig>
  * reutiliza ese cobro y NO se cobra de nuevo.
  */
 class OneclickPaymentProviderService extends AbstractPaymentProvider<OneclickOptions> {
-  static identifier = "oneclick"
+  static readonly identifier = "oneclick"
 
   protected client_: OneclickClient
   protected logger_: Logger

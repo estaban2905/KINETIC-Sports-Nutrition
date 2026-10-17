@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Zap, Activity, Flame, Shield } from 'lucide-react';
+import { Activity } from 'lucide-react';
 
 export const ExperienceSection: React.FC = () => {
   const steps = [

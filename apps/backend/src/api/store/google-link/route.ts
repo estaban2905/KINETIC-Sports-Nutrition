@@ -42,7 +42,7 @@ export async function POST(req: AuthenticatedMedusaRequest, res: MedusaResponse)
 
   await auth.updateAuthIdentities({
     id: identity.id,
-    app_metadata: { ...(identity.app_metadata ?? {}), customer_id: customer.id },
+    app_metadata: { ...identity.app_metadata, customer_id: customer.id },
   })
   res.json({ linked: true })
 }

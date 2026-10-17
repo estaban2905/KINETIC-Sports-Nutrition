@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Newspaper } from "@medusajs/icons"
+import { Newspaper, Trash } from "@medusajs/icons"
 import {
   Badge,
   Button,
@@ -16,7 +16,6 @@ import {
   Textarea,
   toast,
 } from "@medusajs/ui"
-import { Trash } from "@medusajs/icons"
 
 type Hero = {
   id?: string

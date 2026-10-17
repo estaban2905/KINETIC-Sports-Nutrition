@@ -11,7 +11,7 @@ type ResendOptions = {
 }
 
 class ResendNotificationProviderService extends AbstractNotificationProviderService {
-  static identifier = "resend"
+  static readonly identifier = "resend"
 
   protected options_: ResendOptions
   protected client_: Resend

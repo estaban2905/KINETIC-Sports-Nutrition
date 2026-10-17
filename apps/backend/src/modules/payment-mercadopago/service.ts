@@ -1,6 +1,6 @@
 import { AbstractPaymentProvider, BigNumber } from "@medusajs/framework/utils"
-import type { Logger } from "@medusajs/framework/types"
 import type {
+  Logger,
   AuthorizePaymentInput,
   AuthorizePaymentOutput,
   CancelPaymentInput,
@@ -46,7 +46,7 @@ type MercadoPagoOptions = {
  * `cart.complete()` right after the customer returns from checkout.
  */
 class MercadoPagoPaymentProviderService extends AbstractPaymentProvider<MercadoPagoOptions> {
-  static identifier = "mercadopago"
+  static readonly identifier = "mercadopago"
 
   protected options_: MercadoPagoOptions
   protected client_: MercadoPagoConfig

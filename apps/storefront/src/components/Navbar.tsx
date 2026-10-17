@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, Menu, X, Zap, ChevronRight, User as UserIcon, Package, Repeat } from 'lucide-react';
+import { ShoppingBag, Menu, X, Zap, ChevronRight, User as UserIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { LandingSettings, LandingNavLink, getLandingNavLinks } from '../lib/landing';
 import { useAuth } from '../context/AuthContext';

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
-import { ArrowRight, ShieldCheck, Zap, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { ProteinVisual } from './ProteinVisual';
 import { ProductFlavor, ProductSize } from '../types';
 import { getLandingHero, getLandingTrustBadges, LandingHero, LandingTrustBadge } from '../lib/landing';

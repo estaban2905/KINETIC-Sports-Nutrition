@@ -3,7 +3,7 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { ENABLE_ACCOUNTS } from '../lib/features';
-import { describeAuthError, validateResetForm } from '../lib/accountValidation';
+import { validateResetForm } from '../lib/accountValidation';
 
 const INPUT_CLASS =
   'w-full bg-neutral-800 border rounded-xl px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-lime-400 transition-colors';

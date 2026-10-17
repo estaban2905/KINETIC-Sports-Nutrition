@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { Flame, Clock, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import { Flame, Clock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Product, ProductFlavor, ProductSize } from '../types';
 import { getLandingBanners, getLandingSettings, LandingBanner, LandingSettings } from '../lib/landing';
 

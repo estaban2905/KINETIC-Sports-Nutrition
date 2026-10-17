@@ -61,7 +61,7 @@ export type TransportOrderResult = {
  */
 export function splitStreet(address: string): { streetName: string; streetNumber: string } {
   const trimmed = address.trim()
-  const match = trimmed.match(/^(.*\S)\s+(\d+[A-Za-z]?)$/)
+  const match = /^(.*\S)\s+(\d+[A-Za-z]?)$/.exec(trimmed)
   if (!match) return { streetName: trimmed, streetNumber: "" }
   return { streetName: match[1], streetNumber: match[2] }
 }

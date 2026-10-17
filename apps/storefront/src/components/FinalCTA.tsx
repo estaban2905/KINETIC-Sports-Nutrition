@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
 import { ArrowRight, Zap, ShieldCheck } from 'lucide-react';
 import { Product, ProductFlavor, ProductSize } from '../types';
 import { getLandingFinalCta, LandingFinalCta } from '../lib/landing';

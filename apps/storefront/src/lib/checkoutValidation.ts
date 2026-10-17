@@ -111,7 +111,7 @@ export function contactFromCart(
   const name = first && last && first !== last ? `${first} ${last}` : first || last;
 
   const parts = (address.address_1 ?? "").trim().split(/\s+/);
-  const lastPart = parts[parts.length - 1] ?? "";
+  const lastPart = parts.at(-1) ?? "";
   const hasNumber = parts.length > 1 && /^\d+[a-zA-Z]?$/.test(lastPart);
 
   return {
