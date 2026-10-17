@@ -55,10 +55,10 @@ export const SpecialOffer: React.FC<SpecialOfferProps> = ({ product, onClaimOffe
   });
 
   useEffect(() => {
-    getLandingBanners().then((banners) => {
+    void getLandingBanners().then((banners) => {
       if (banners?.length) setBanner(banners[0]);
     });
-    getLandingSettings().then(setSettings);
+    void getLandingSettings().then(setSettings);
   }, []);
 
   useEffect(() => {

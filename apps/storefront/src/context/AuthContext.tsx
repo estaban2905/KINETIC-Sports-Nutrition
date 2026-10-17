@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!ENABLE_ACCOUNTS) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const token = await medusa.client.getToken();
         if (token) await loadCustomer();
@@ -312,9 +312,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const userId = user?.id;
   useEffect(() => {
     if (!userId) return;
-    refreshOrders();
+    void refreshOrders();
     refreshAddresses().catch(() => undefined);
-    refreshSubscriptions();
+    void refreshSubscriptions();
   }, [userId, refreshOrders, refreshAddresses, refreshSubscriptions]);
 
   return (

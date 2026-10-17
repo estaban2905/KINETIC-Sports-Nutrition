@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 
 function normalize(text: string): string {
@@ -16,13 +16,17 @@ export function ComunaAutocomplete({
   onBlur,
   comunas,
   error,
+  id,
 }: {
   value: string;
   onChange: (v: string) => void;
   onBlur: () => void;
   comunas: string[];
   error?: string;
+  id?: string;
 }) {
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
   const [isOpen, setIsOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
 
@@ -64,10 +68,11 @@ export function ComunaAutocomplete({
   if (comunas.length === 0) {
     return (
       <div>
-        <label className="block text-[11px] font-mono uppercase text-neutral-400 mb-1">
+        <label htmlFor={inputId} className="block text-[11px] font-mono uppercase text-neutral-400 mb-1">
           Ciudad / Comuna
         </label>
         <input
+          id={inputId}
           required
           aria-invalid={!!error}
           type="text"
@@ -87,16 +92,18 @@ export function ComunaAutocomplete({
 
   return (
     <div className="relative">
-      <label className="block text-[11px] font-mono uppercase text-neutral-400 mb-1">
+      <label htmlFor={inputId} className="block text-[11px] font-mono uppercase text-neutral-400 mb-1">
         Ciudad / Comuna
       </label>
       <div className="relative">
         <input
+          id={inputId}
           required
           aria-invalid={!!error}
           type="text"
           role="combobox"
           aria-expanded={isOpen}
+          aria-controls={`${inputId}-listbox`}
           aria-autocomplete="list"
           autoComplete="address-level2"
           value={value}
@@ -122,7 +129,7 @@ export function ComunaAutocomplete({
       </div>
 
       {isOpen && suggestions.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full max-h-52 overflow-y-auto bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl">
+        <ul id={`${inputId}-listbox`} className="absolute z-10 mt-1 w-full max-h-52 overflow-y-auto bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl">
           {suggestions.map((comuna, i) => (
             <li key={comuna}>
               <button

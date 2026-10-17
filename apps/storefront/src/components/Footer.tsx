@@ -48,9 +48,9 @@ export const Footer: React.FC<FooterProps> = ({ settings }) => {
   const [legalLinks, setLegalLinks] = useState<LandingNavLink[] | null>(null);
 
   useEffect(() => {
-    getLandingNavLinks('footer_productos').then(setProductLinks);
-    getLandingNavLinks('footer_soporte').then(setSupportLinks);
-    getLandingNavLinks('footer_legal').then(setLegalLinks);
+    void getLandingNavLinks('footer_productos').then(setProductLinks);
+    void getLandingNavLinks('footer_soporte').then(setSupportLinks);
+    void getLandingNavLinks('footer_legal').then(setLegalLinks);
   }, []);
 
   const scrollToTop = () => {

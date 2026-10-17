@@ -23,7 +23,7 @@ export const FinalCTA: React.FC<FinalCTAProps> = ({ product, onBuyNow, selectedF
   const [content, setContent] = useState<LandingFinalCta | null>(null);
 
   useEffect(() => {
-    getLandingFinalCta().then(setContent);
+    void getLandingFinalCta().then(setContent);
   }, []);
   return (
     <section className="relative py-28 bg-neutral-950 overflow-hidden border-t border-neutral-900">

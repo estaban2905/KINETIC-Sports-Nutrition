@@ -345,7 +345,7 @@ export const MembershipTab: React.FC<{ notify: (message: string) => void }> = ({
   // Al volver de Transbank se recarga el estado real y se limpia la URL.
   useEffect(() => {
     if (!cardResult) return;
-    refreshSubscriptions();
+    void refreshSubscriptions();
     const next = new URLSearchParams(searchParams);
     next.delete('card');
     setSearchParams(next, { replace: true });

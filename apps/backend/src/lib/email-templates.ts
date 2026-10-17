@@ -23,10 +23,10 @@ export const formatCLP = (amount: number | null | undefined): string => currency
 
 export function escapeHtml(value: string): string {
   return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
 }
 
 /** Public storefront URL (no trailing slash), or null when not configured. */

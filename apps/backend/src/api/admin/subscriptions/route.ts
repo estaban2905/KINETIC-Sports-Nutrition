@@ -15,8 +15,8 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const subscriptions = req.scope.resolve<SubscriptionModuleService>(SUBSCRIPTION_MODULE)
   const q = req.query as Record<string, string | undefined>
 
-  const limit = Math.min(Math.max(parseInt(q.limit ?? "50", 10) || 50, 1), MAX_LIMIT)
-  const offset = Math.max(parseInt(q.offset ?? "0", 10) || 0, 0)
+  const limit = Math.min(Math.max(Number.parseInt(q.limit ?? "50", 10) || 50, 1), MAX_LIMIT)
+  const offset = Math.max(Number.parseInt(q.offset ?? "0", 10) || 0, 0)
   const filter: Record<string, unknown> = {}
   if (q.status && (SUBSCRIPTION_STATUSES as readonly string[]).includes(q.status)) filter.status = q.status
 

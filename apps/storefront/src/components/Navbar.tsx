@@ -37,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, settings 
   }, []);
 
   useEffect(() => {
-    getLandingNavLinks('navbar').then(setNavLinksData);
+    void getLandingNavLinks('navbar').then(setNavLinksData);
   }, []);
 
   const [brandName, ...brandTaglineParts] = (settings?.brand_name ?? FALLBACK_BRAND_NAME).split(' ');

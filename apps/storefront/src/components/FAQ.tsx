@@ -9,7 +9,7 @@ export const FAQ: React.FC = () => {
   const [faqs, setFaqs] = useState<{ question: string; answer: string }[]>(FAQS);
 
   useEffect(() => {
-    getLandingFAQs().then((fetched) => {
+    void getLandingFAQs().then((fetched) => {
       if (fetched && fetched.length > 0) {
         setFaqs(fetched.map((f) => ({ question: f.question, answer: f.answer })));
       }

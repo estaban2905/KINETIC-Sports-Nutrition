@@ -267,7 +267,7 @@ const LandingContentPage = () => {
   }
 
   useEffect(() => {
-    loadAll()
+    void loadAll()
   }, [])
 
   const saveHero = async () => {
@@ -318,7 +318,7 @@ const LandingContentPage = () => {
         body: JSON.stringify({ ...newBenefit, active: true, sort_order: benefits.length + 1 }),
       })
       setNewBenefit(emptyBenefit)
-      loadAll()
+      void loadAll()
       toast.success("Beneficio agregado.")
     } catch {
       toast.error("No se pudo crear el beneficio.")
@@ -351,7 +351,7 @@ const LandingContentPage = () => {
         body: JSON.stringify({ ...newFaq, active: true, sort_order: faqs.length + 1 }),
       })
       setNewFaq(emptyFaq)
-      loadAll()
+      void loadAll()
       toast.success("Pregunta agregada.")
     } catch {
       toast.error("No se pudo crear la pregunta.")
@@ -384,7 +384,7 @@ const LandingContentPage = () => {
         body: JSON.stringify({ ...newBanner, active: true, sort_order: banners.length + 1 }),
       })
       setNewBanner(emptyBanner)
-      loadAll()
+      void loadAll()
       toast.success("Banner agregado.")
     } catch {
       toast.error("No se pudo crear el banner.")
@@ -421,7 +421,7 @@ const LandingContentPage = () => {
         }),
       })
       setNewTestimonial(emptyTestimonial)
-      loadAll()
+      void loadAll()
       toast.success("Testimonio agregado.")
     } catch {
       toast.error("No se pudo crear el testimonio.")
@@ -454,7 +454,7 @@ const LandingContentPage = () => {
         body: JSON.stringify({ ...newTrustBadge, active: true, sort_order: trustBadges.length + 1 }),
       })
       setNewTrustBadge(emptyTrustBadge)
-      loadAll()
+      void loadAll()
       toast.success("Chip de confianza agregado.")
     } catch {
       toast.error("No se pudo crear el chip de confianza.")
@@ -487,7 +487,7 @@ const LandingContentPage = () => {
         body: JSON.stringify({ ...newGuarantee, active: true, sort_order: guarantees.length + 1 }),
       })
       setNewGuarantee(emptyGuarantee)
-      loadAll()
+      void loadAll()
       toast.success("Garantía agregada.")
     } catch {
       toast.error("No se pudo crear la garantía.")
@@ -520,7 +520,7 @@ const LandingContentPage = () => {
         body: JSON.stringify({ ...newUsageTip, active: true, sort_order: usageTips.length + 1 }),
       })
       setNewUsageTip(emptyUsageTip)
-      loadAll()
+      void loadAll()
       toast.success("Tip de uso agregado.")
     } catch {
       toast.error("No se pudo crear el tip de uso.")
@@ -553,7 +553,7 @@ const LandingContentPage = () => {
         body: JSON.stringify({ ...newNavLink, active: true, sort_order: navLinks.length + 1 }),
       })
       setNewNavLink(emptyNavLink)
-      loadAll()
+      void loadAll()
       toast.success("Link agregado.")
     } catch {
       toast.error("No se pudo crear el link.")

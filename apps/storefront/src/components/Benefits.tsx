@@ -17,7 +17,7 @@ export const Benefits: React.FC = () => {
   const [benefits, setBenefits] = useState<BenefitItem[]>(BENEFITS);
 
   useEffect(() => {
-    getLandingBenefits().then((fetched) => {
+    void getLandingBenefits().then((fetched) => {
       if (fetched && fetched.length > 0) {
         setBenefits(
           fetched.map((b) => ({

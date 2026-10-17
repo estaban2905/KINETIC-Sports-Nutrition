@@ -44,7 +44,7 @@ export function LandingPage() {
   const [settings, setSettings] = useState<LandingSettings | null>(null);
 
   useEffect(() => {
-    getLandingSettings().then(setSettings);
+    void getLandingSettings().then(setSettings);
   }, []);
 
   // Overrides the static <title>/meta description in index.html once Medusa
@@ -141,7 +141,7 @@ export function LandingPage() {
   };
 
   const handleClaimOffer = () => {
-    handleAddFlagshipToCart(selectedFlavor, selectedSize, 1);
+    void handleAddFlagshipToCart(selectedFlavor, selectedSize, 1);
   };
 
   return (

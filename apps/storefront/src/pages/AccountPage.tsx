@@ -105,7 +105,7 @@ export const AccountPage: React.FC = () => {
   };
 
   React.useEffect(() => {
-    if (currentTab === 'addresses') listComunas().then(setComunas);
+    if (currentTab === 'addresses') void listComunas().then(setComunas);
   }, [currentTab]);
 
   // Cuando el perfil llega (o cambia) desde el servidor, el formulario lo refleja.
@@ -306,7 +306,7 @@ export const AccountPage: React.FC = () => {
               <button
                 onClick={async () => {
                   await logout();
-                  navigate('/');
+                  void navigate('/');
                 }}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-750 text-neutral-300 hover:text-white border border-neutral-700/80 text-xs font-semibold transition-all"
               >
@@ -584,10 +584,10 @@ export const AccountPage: React.FC = () => {
               <form onSubmit={handleSaveProfile} className="space-y-4" noValidate>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">
+                    <label htmlFor="profile-name" className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">
                       Nombre Completo
                     </label>
-                    <input
+                    <input id="profile-name"
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -598,10 +598,10 @@ export const AccountPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">
+                    <label htmlFor="profile-rut" className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">
                       RUT (Para Boleta SII)
                     </label>
-                    <input
+                    <input id="profile-rut"
                       type="text"
                       placeholder="12.345.678-9"
                       value={formData.rut}
@@ -614,10 +614,10 @@ export const AccountPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">
+                  <label htmlFor="profile-phone" className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">
                     Teléfono Móvil (Para que Chilexpress te llame)
                   </label>
-                  <input
+                  <input id="profile-phone"
                     type="tel"
                     placeholder="+56 9 1234 5678"
                     value={formData.phone}
@@ -708,8 +708,8 @@ export const AccountPage: React.FC = () => {
                 <form onSubmit={handleAddAddress} className="space-y-4 mt-4" noValidate>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="col-span-2">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">Calle</label>
-                      <input
+                      <label htmlFor="address-street" className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">Calle</label>
+                      <input id="address-street"
                         type="text"
                         value={addressForm.street}
                         onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
@@ -718,8 +718,8 @@ export const AccountPage: React.FC = () => {
                       {addressErrors.street && <p className="text-xs text-red-400 mt-1.5">{addressErrors.street}</p>}
                     </div>
                     <div>
-                      <label className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">Número</label>
-                      <input
+                      <label htmlFor="address-number" className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">Número</label>
+                      <input id="address-number"
                         type="text"
                         value={addressForm.streetNumber}
                         onChange={(e) => setAddressForm({ ...addressForm, streetNumber: e.target.value })}
@@ -730,8 +730,8 @@ export const AccountPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">Depto / Casa (opcional)</label>
-                    <input
+                    <label htmlFor="address-apartment" className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">Depto / Casa (opcional)</label>
+                    <input id="address-apartment"
                       type="text"
                       value={addressForm.apartment}
                       onChange={(e) => setAddressForm({ ...addressForm, apartment: e.target.value })}
@@ -741,8 +741,8 @@ export const AccountPage: React.FC = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">Comuna</label>
-                      <ComunaAutocomplete
+                      <label htmlFor="address-city" className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">Comuna</label>
+                      <ComunaAutocomplete id="address-city"
                         value={addressForm.city}
                         onChange={(city) => setAddressForm({ ...addressForm, city })}
                         onBlur={() => undefined}
@@ -751,8 +751,8 @@ export const AccountPage: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">Región</label>
-                      <input
+                      <label htmlFor="address-province" className="text-xs font-semibold uppercase tracking-wider text-neutral-300 block mb-1.5">Región</label>
+                      <input id="address-province"
                         type="text"
                         value={addressForm.province}
                         onChange={(e) => setAddressForm({ ...addressForm, province: e.target.value })}

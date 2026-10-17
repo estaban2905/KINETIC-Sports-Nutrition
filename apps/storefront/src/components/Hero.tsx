@@ -36,8 +36,8 @@ export const Hero: React.FC<HeroProps> = ({
   const [trustBadges, setTrustBadges] = useState<LandingTrustBadge[] | null>(null);
 
   useEffect(() => {
-    getLandingHero().then(setHeroContent);
-    getLandingTrustBadges().then(setTrustBadges);
+    void getLandingHero().then(setHeroContent);
+    void getLandingTrustBadges().then(setTrustBadges);
   }, []);
 
   const { scrollYProgress } = useScroll({

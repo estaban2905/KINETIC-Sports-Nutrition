@@ -621,7 +621,7 @@ export function createTubCapBumpTexture(): THREE.CanvasTexture {
 }
 
 function adjustColorBrightness(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
+  const num = Number.parseInt(hex.replace('#', ''), 16);
   const amt = Math.round(2.55 * percent);
   const R = (num >> 16) + amt;
   const G = ((num >> 8) & 0x00ff) + amt;

@@ -88,7 +88,7 @@ export const SubscribeModal: React.FC<Props> = ({ open, onClose, product, flavor
     setErrors({});
     setFormError(null);
     setTermsError(false);
-    listComunas().then(setComunas);
+    void listComunas().then(setComunas);
   }, [open, user, addresses]);
 
   const perCycle = useMemo(() => subscriptionPrice(size.price) * quantity, [size.price, quantity]);
@@ -200,8 +200,8 @@ export const SubscribeModal: React.FC<Props> = ({ open, onClose, product, flavor
             </div>
             <Field label="Depto / casa (opcional)" value={values.apartment} onChange={set('apartment')} />
             <div>
-              <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider block mb-1.5">Comuna</label>
-              <ComunaAutocomplete
+              <label htmlFor="subscribe-city" className="text-xs font-semibold text-neutral-300 uppercase tracking-wider block mb-1.5">Comuna</label>
+              <ComunaAutocomplete id="subscribe-city"
                 value={values.city}
                 onChange={set('city')}
                 onBlur={() => undefined}

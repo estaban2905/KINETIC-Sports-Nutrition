@@ -19,7 +19,7 @@ export const Testimonials: React.FC = () => {
   const [testimonials, setTestimonials] = useState<TestimonialItem[]>(TESTIMONIALS);
 
   useEffect(() => {
-    getLandingTestimonials().then((fetched) => {
+    void getLandingTestimonials().then((fetched) => {
       if (fetched && fetched.length > 0) {
         setTestimonials(
           fetched.map((t) => ({

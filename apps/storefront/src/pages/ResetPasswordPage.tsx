@@ -80,10 +80,10 @@ export const ResetPasswordPage: React.FC = () => {
               Cuenta: <strong className="text-neutral-200">{email}</strong>
             </p>
             <div>
-              <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider block mb-1.5">
+              <label htmlFor="reset-password" className="text-xs font-semibold text-neutral-300 uppercase tracking-wider block mb-1.5">
                 Nueva contraseña
               </label>
-              <input
+              <input id="reset-password"
                 type="password"
                 autoComplete="new-password"
                 value={password}
@@ -94,10 +94,10 @@ export const ResetPasswordPage: React.FC = () => {
               {errors.password && <p className="text-xs text-red-400 mt-1.5">{errors.password}</p>}
             </div>
             <div>
-              <label className="text-xs font-semibold text-neutral-300 uppercase tracking-wider block mb-1.5">
+              <label htmlFor="reset-password-confirm" className="text-xs font-semibold text-neutral-300 uppercase tracking-wider block mb-1.5">
                 Repite la contraseña
               </label>
-              <input
+              <input id="reset-password-confirm"
                 type="password"
                 autoComplete="new-password"
                 value={confirmPassword}
