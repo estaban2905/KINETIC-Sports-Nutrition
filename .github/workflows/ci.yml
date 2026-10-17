@@ -49,6 +49,35 @@ jobs:
       - name: Build
         run: npm run build -w apps/storefront
 
+  sonar:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    # La rama principal de SonarCloud es "main" (plan gratis solo analiza esa);
+    # el resto del trabajo se analiza a través de pull requests.
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Backend coverage
+        working-directory: apps/backend
+        run: TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules npx jest --silent --runInBand --forceExit --coverage --coverageReporters=lcov --collectCoverageFrom='src/**/*.ts'
+      - name: Storefront coverage
+        working-directory: apps/storefront
+        run: npx vitest run --coverage
+      - name: Normalizar rutas de cobertura
+        run: |
+          sed -i 's#^SF:#SF:apps/backend/#' apps/backend/coverage/lcov.info
+          sed -i 's#^SF:#SF:apps/storefront/#' apps/storefront/coverage/lcov.info
+      - uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
   docker:
     name: Docker build (${{ matrix.app }})
     runs-on: ubuntu-latest
