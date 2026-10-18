@@ -1,7 +1,7 @@
 import { AbstractPaymentProvider, BigNumber } from "@medusajs/framework/utils"
-import type { Logger } from "@medusajs/framework/types"
 import crypto from "node:crypto"
 import type {
+  Logger,
   AuthorizePaymentInput,
   AuthorizePaymentOutput,
   CancelPaymentInput,
@@ -66,7 +66,7 @@ type KhipuPayment = {
  * medusa-config.ts when that env var is set (see Stripe/Mercado Pago).
  */
 class KhipuPaymentProviderService extends AbstractPaymentProvider<KhipuOptions> {
-  static identifier = "khipu"
+  static readonly identifier = "khipu"
 
   protected options_: KhipuOptions
   protected logger_: Logger
@@ -89,7 +89,7 @@ class KhipuPaymentProviderService extends AbstractPaymentProvider<KhipuOptions> 
       headers: {
         "x-api-key": this.options_.apiKey,
         "Content-Type": "application/json",
-        ...(init?.headers ?? {}),
+        ...init?.headers,
       },
     })
     if (!response.ok) {

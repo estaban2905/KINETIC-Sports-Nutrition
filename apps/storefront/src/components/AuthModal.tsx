@@ -120,7 +120,7 @@ export const AuthModal: React.FC = () => {
 
   const handleGoogle = () => {
     // Si todo sale bien la página cambia a Google y no se vuelve a este código.
-    run(startGoogleLogin);
+    void run(startGoogleLogin);
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -128,7 +128,7 @@ export const AuthModal: React.FC = () => {
     const found = validateLoginForm({ email, password });
     setErrors(found);
     if (Object.keys(found).length) return;
-    run(async () => {
+    void run(async () => {
       await login(email, password);
       switchView('login');
     });
@@ -139,7 +139,7 @@ export const AuthModal: React.FC = () => {
     const found = validateRegisterForm({ name, email, password, confirmPassword });
     setErrors(found);
     if (Object.keys(found).length) return;
-    run(async () => {
+    void run(async () => {
       await register(name, email, password);
       switchView('login');
     });
@@ -150,7 +150,7 @@ export const AuthModal: React.FC = () => {
     const emailError = validateEmail(email);
     setErrors({ email: emailError });
     if (emailError) return;
-    run(async () => {
+    void run(async () => {
       await requestPasswordReset(email);
       setView('forgot-sent');
     });

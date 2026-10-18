@@ -69,7 +69,7 @@ type CourierServiceOption = {
  * resolved from `shipping_address.city` via the Coverage API in ./coverage.ts.
  */
 class ChilexpressFulfillmentProviderService extends AbstractFulfillmentProviderService {
-  static identifier = "chilexpress"
+  static readonly identifier = "chilexpress"
 
   protected options_: ChilexpressOptions
 

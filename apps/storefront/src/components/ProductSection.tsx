@@ -96,9 +96,9 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
   const { isAuthenticated, openAuthModal } = useAuth();
 
   useEffect(() => {
-    getLandingProductSection().then(setSection);
-    getLandingGuarantees().then(setGuarantees);
-    getLandingUsageTips().then(setUsageTips);
+    void getLandingProductSection().then(setSection);
+    void getLandingGuarantees().then(setGuarantees);
+    void getLandingUsageTips().then(setUsageTips);
   }, []);
 
   const content = section ?? FALLBACK_SECTION;
@@ -111,7 +111,7 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
     
     // Trigger celebratory confetti
     try {
-      confetti({
+      void confetti({
         particleCount: 50,
         spread: 60,
         origin: { y: 0.8 },
@@ -327,9 +327,9 @@ export const ProductSection: React.FC<ProductSectionProps> = ({
             {/* Purchase Mode Selector: Compra Única vs Suscripción Mensual 15% OFF */}
             {ENABLE_SUBSCRIPTIONS && (
             <div className="mt-8 space-y-3">
-              <label className="block text-xs font-mono uppercase tracking-wider text-neutral-300">
+              <span className="block text-xs font-mono uppercase tracking-wider text-neutral-300">
                 3. Modalidad de Compra:
-              </label>
+              </span>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* One time option */}

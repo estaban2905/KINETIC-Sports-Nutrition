@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
-import { ArrowRight, ShieldCheck, Zap, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { ProteinVisual } from './ProteinVisual';
 import { ProductFlavor, ProductSize } from '../types';
 import { getLandingHero, getLandingTrustBadges, LandingHero, LandingTrustBadge } from '../lib/landing';
@@ -36,8 +36,8 @@ export const Hero: React.FC<HeroProps> = ({
   const [trustBadges, setTrustBadges] = useState<LandingTrustBadge[] | null>(null);
 
   useEffect(() => {
-    getLandingHero().then(setHeroContent);
-    getLandingTrustBadges().then(setTrustBadges);
+    void getLandingHero().then(setHeroContent);
+    void getLandingTrustBadges().then(setTrustBadges);
   }, []);
 
   const { scrollYProgress } = useScroll({

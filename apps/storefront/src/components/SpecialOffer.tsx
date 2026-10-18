@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { Flame, Clock, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import { Flame, Clock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Product, ProductFlavor, ProductSize } from '../types';
 import { getLandingBanners, getLandingSettings, LandingBanner, LandingSettings } from '../lib/landing';
 
@@ -55,10 +54,10 @@ export const SpecialOffer: React.FC<SpecialOfferProps> = ({ product, onClaimOffe
   });
 
   useEffect(() => {
-    getLandingBanners().then((banners) => {
+    void getLandingBanners().then((banners) => {
       if (banners?.length) setBanner(banners[0]);
     });
-    getLandingSettings().then(setSettings);
+    void getLandingSettings().then(setSettings);
   }, []);
 
   useEffect(() => {

@@ -90,7 +90,7 @@ async function sendOrderStatusEmailUnlocked(container: MedusaContainer, orderId:
 
   const flag = kind === "confirmation" ? CONFIRMATION_FLAG : PENDING_PAYMENT_FLAG
   await container.resolve(Modules.ORDER).updateOrders(order.id, {
-    metadata: { ...(order.metadata ?? {}), [flag]: true },
+    metadata: { ...order.metadata, [flag]: true },
   })
   return kind
 }

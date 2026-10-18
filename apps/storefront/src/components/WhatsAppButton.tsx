@@ -13,7 +13,7 @@ interface WhatsAppButtonProps {
 
 export const WhatsAppButton: React.FC<WhatsAppButtonProps> = ({ settings }) => {
   const [showTooltip, setShowTooltip] = useState(true);
-  const phoneNumber = (settings?.whatsapp_number ?? FALLBACK_PHONE).replace(/[^0-9]/g, '');
+  const phoneNumber = (settings?.whatsapp_number ?? FALLBACK_PHONE).replaceAll(/\D/g, '');
 
   const message = encodeURIComponent(settings?.whatsapp_message_template ?? FALLBACK_MESSAGE);
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;

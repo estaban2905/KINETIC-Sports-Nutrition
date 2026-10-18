@@ -82,8 +82,8 @@ export function OrderLookupPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4 bg-neutral-900 border border-neutral-800 rounded-2xl p-6">
           <div>
-            <label className="text-sm text-neutral-400 mb-1 block">Número de pedido</label>
-            <input
+            <label htmlFor="lookup-order" className="text-sm text-neutral-400 mb-1 block">Número de pedido</label>
+            <input id="lookup-order"
               type="text"
               required
               placeholder="Ej: 1024"
@@ -93,8 +93,8 @@ export function OrderLookupPage() {
             />
           </div>
           <div>
-            <label className="text-sm text-neutral-400 mb-1 block">Correo electrónico</label>
-            <input
+            <label htmlFor="lookup-email" className="text-sm text-neutral-400 mb-1 block">Correo electrónico</label>
+            <input id="lookup-email"
               type="email"
               required
               placeholder="tu@correo.com"

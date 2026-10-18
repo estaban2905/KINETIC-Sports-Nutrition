@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Eye, ShoppingBag, Star, Zap, ArrowRight, Check } from 'lucide-react';
+import { Eye, ShoppingBag, Star, Zap, Check } from 'lucide-react';
 import { Product } from '../types';
 
 interface FeaturedProductsProps {

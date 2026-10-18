@@ -1,7 +1,7 @@
 import type { MedusaContainer } from "@medusajs/framework"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { buildBoletaPayload } from "./boleta"
-import { documentoEmail } from "./email-templates"
+import { documentoEmail, storefrontUrl } from "./email-templates"
 import { buildFacturaPayload, type BillingData } from "./factura"
 import { INVOICING_MODULE } from "../modules/invoicing"
 import { decideClaim, isDefinitiveFailure } from "./invoice-claim"
@@ -10,7 +10,6 @@ import { isOrderPaid } from "./order-status"
 import { isValidRut } from "./rut"
 import { Sentry } from "./sentry"
 import { getSimpleFacturaClient } from "./simplefactura"
-import { storefrontUrl } from "./email-templates"
 
 export type DteTipo = "boleta" | "factura"
 

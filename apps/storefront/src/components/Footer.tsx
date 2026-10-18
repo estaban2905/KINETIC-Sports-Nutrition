@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Zap, Instagram, MessageCircle, ArrowUp, ShieldCheck } from 'lucide-react';
+import { Zap, Instagram, MessageCircle, ArrowUp } from 'lucide-react';
 import { LandingSettings, LandingNavLink, getLandingNavLinks } from '../lib/landing';
 
 const FALLBACK_BRAND_NAME = 'KINETIC';
@@ -40,7 +40,7 @@ export const Footer: React.FC<FooterProps> = ({ settings }) => {
   const brandTagline = brandTaglineParts.length
     ? brandTaglineParts.join(' ').toUpperCase()
     : FALLBACK_BRAND_TAGLINE;
-  const whatsappDigits = (settings?.whatsapp_number ?? FALLBACK_WHATSAPP).replace(/[^0-9]/g, '');
+  const whatsappDigits = (settings?.whatsapp_number ?? FALLBACK_WHATSAPP).replaceAll(/\D/g, '');
   const contactEmail = settings?.contact_email ?? FALLBACK_CONTACT_EMAIL;
 
   const [productLinks, setProductLinks] = useState<LandingNavLink[] | null>(null);
@@ -48,9 +48,9 @@ export const Footer: React.FC<FooterProps> = ({ settings }) => {
   const [legalLinks, setLegalLinks] = useState<LandingNavLink[] | null>(null);
 
   useEffect(() => {
-    getLandingNavLinks('footer_productos').then(setProductLinks);
-    getLandingNavLinks('footer_soporte').then(setSupportLinks);
-    getLandingNavLinks('footer_legal').then(setLegalLinks);
+    void getLandingNavLinks('footer_productos').then(setProductLinks);
+    void getLandingNavLinks('footer_soporte').then(setSupportLinks);
+    void getLandingNavLinks('footer_legal').then(setLegalLinks);
   }, []);
 
   const scrollToTop = () => {

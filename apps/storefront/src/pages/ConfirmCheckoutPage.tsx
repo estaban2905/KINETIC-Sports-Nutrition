@@ -55,9 +55,9 @@ export function ConfirmCheckoutPage() {
   useEffect(() => {
     if (cancelled || attempted.current || !cart) return;
     attempted.current = true;
-    completeWithRetries(completeCart).then((outcome) => {
+    void completeWithRetries(completeCart).then((outcome) => {
       if (outcome.kind === 'order') {
-        navigate(`/pedido/${outcome.orderId}`, { replace: true });
+        void navigate(`/pedido/${outcome.orderId}`, { replace: true });
       } else {
         setDetail(outcome.message);
         setStatus('unconfirmed');

@@ -3,9 +3,9 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import type { IProductModuleService } from "@medusajs/framework/types"
 
 function parseWeightGrams(label: string): number | undefined {
-  const match = label.match(/\(([\d.]+)\s*(G|KG)\)/i)
+  const match = /\(([\d.]+)\s*(G|KG)\)/i.exec(label)
   if (!match) return undefined
-  const value = parseFloat(match[1])
+  const value = Number.parseFloat(match[1])
   return match[2].toUpperCase() === "KG" ? Math.round(value * 1000) : Math.round(value)
 }
 

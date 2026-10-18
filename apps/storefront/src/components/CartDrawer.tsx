@@ -150,7 +150,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
   }, [user?.billing]);
 
   useEffect(() => {
-    listComunas().then(setComunas);
+    void listComunas().then(setComunas);
   }, []);
   const [shippingOptions, setShippingOptions] = useState<CartShippingOption[]>([]);
   const [selectedShippingOption, setSelectedShippingOption] = useState<string | null>(null);
@@ -222,7 +222,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
     if (!isStripeSelected || !stripeCardContainerRef.current) return;
 
     let cancelled = false;
-    getStripe().then((stripe) => {
+    void getStripe().then((stripe) => {
       if (cancelled || !stripe || !stripeCardContainerRef.current) return;
       stripeRef.current = stripe;
       const elements = stripe.elements();
@@ -380,7 +380,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose, startAt
       const result = await completeCart();
       if (result.type === 'order') {
         onClose();
-        navigate(`/pedido/${result.order.id}`);
+        void navigate(`/pedido/${result.order.id}`);
       } else {
         setCheckoutError(result.error?.message ?? 'No pudimos procesar el pago. Intenta de nuevo.');
       }

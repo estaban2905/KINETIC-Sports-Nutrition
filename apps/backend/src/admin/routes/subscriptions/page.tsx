@@ -138,7 +138,7 @@ const SubscriptionsPage = () => {
   }, [status])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   return (

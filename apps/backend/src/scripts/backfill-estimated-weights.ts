@@ -50,7 +50,7 @@ export default async function backfillEstimatedWeights({
 
       await productModuleService.updateProductVariants(variant.id, {
         weight: grams,
-        metadata: { ...(variant.metadata ?? {}), weight_estimated: true },
+        metadata: { ...variant.metadata, weight_estimated: true },
       })
       logger.info(`[backfill-estimated-weights] SKU ${variant.sku}: weight → ${grams}g (estimado)`)
       updated++

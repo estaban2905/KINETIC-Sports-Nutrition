@@ -1,7 +1,7 @@
 import { AbstractPaymentProvider } from "@medusajs/framework/utils"
-import type { Logger } from "@medusajs/framework/types"
 import { Sentry } from "../../lib/sentry"
 import type {
+  Logger,
   AuthorizePaymentInput,
   AuthorizePaymentOutput,
   CancelPaymentInput,
@@ -53,7 +53,7 @@ type WebpayOptions = {
  * production.
  */
 class WebpayPaymentProviderService extends AbstractPaymentProvider<WebpayOptions> {
-  static identifier = "webpay"
+  static readonly identifier = "webpay"
 
   protected options_: WebpayOptions
   protected transaction_: InstanceType<typeof WebpayPlus.Transaction>
